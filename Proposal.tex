@@ -106,44 +106,115 @@ Thesis Proposal: Kinematically Constrained Dense 3D SLAM
 
 \newpage
 
+
+% ~25 pages total 
+% 
+% = Introduction (~3 pages) = 
+% 
+% = Background (~4 pages) = 
+% 
+% = Framework (~8 pages) = 
+% -- Part 1 
+%    [part 1, what's done so far (larger)] 
+%    [part 1, proposed work (a few paragraphs?)} 
+% -- Part 2 
+%    [part 2, what's done so far (larger)] 
+%    [part 2, proposed work (a few paragraphs?)} 
+% -- Part 3 
+%    [part 3, what's done so far (larger)] 
+%    [part 3, proposed work (a few paragraphs?)} 
+% 
+% = Research Questions (~4 pages) = 
+% A list of research questions that you propose to answer in your thesis.  These can be theoretical questions, or experiments that you want to run, or demonstrations you want to do on the robot. 
+% 
+% = Timeline (~1 page) = 
+% A table.  During these months, I will address research questions Q1 and Q3, etc. 
+% 
+% The astute reader will notice that this doesn't sum to 25 pages.  Presumably a title page, abstract, references, etc will fill it out.  Sidd, what do you think, did I get the allocations about right? 
+
+
 \chapter{Introduction}
 
-\begin{itemize}
-    \item Dense 3D reconstruction is useful in many robotics contexts such as
-    scene understanding and planning.
-    \item Typical dense 3D reconstruction techniques assume that nothing is
-    known about how the sensor moves aside from weak priors on the magnitude of
-    the motion, or else use inertial measurment units.
-    \item For this reason, dense reconstruction is treated as an unconstrained
-    SLAM problem, where the pose of the sensor is mostly inferred from the
-    change in the map.
-    \item This leads to significant pose drift.
-    \item Robots, however, often have sensors mounted on actuated linkages, such
-    as necks or arms. These provide very strong priors on the motion of the
-    sensor due to their kinematics.
-    \item Consider the case of a robot with a hand-mounted 2D or 3D sensor. The
-    robot scans the scene and produces a 3D reconstruction.
-    \item With perfectly known robot kinematics, this is easy, and the problem
-    becomes one of simple mapping, rather than SLAM.
-    \item However, even kinematically constrained robotic linkages may have
-    significant noise and inaccuracies. Hysteresis from relative joint encoders
-    leads to inaccuracies that compound over time, and on some systems, cable
-    slack and nonrigid deformation prevent us from knowing the robot kinematics
-    with certainty.
-    \item We can correct for this uncertainty using the sensor mounted on the
-    arm. 
-    \item Rather than estimating the pose of the sensor directly, we can
-    estimate the joint angles of the robot, and hopefully arrive at a better
-    pose estimate this way.
-    \item In 3D, the solution is related to dense 3D odometry. We can use
-    kinematically-constrained gradient descent to produce a pose estimate.
-    \item In 2D, the solution is related to visual odometry and visual servoing.
-    We can compute feature tracks in the image, and then use the robot's image
-    Jacobian to compute a change in joint angles.
-    
-\end{itemize}
+Dense 3D reconstruction is a well-studied problem in computer vision and
+robotics. Given a series of noisy sensor readings a unknown poses, the task is
+to infer the true geometric structure and color of the world. This  is a
+variant of the Simultaneous Localization and Mapping (SLAM) problem, since it
+requires simultaneously estimating the state of the sensor and the scene at
+once. In the context of robotic manipulation, dense 3D reconstruction is useful for
+scene understanding, planning, grasping, and more. 
 
-\chapter{Framework}
+Typical techniques for solving this problem focus on handheld sensors, and thus
+assume that nothing is known about the pose of the sensor aside from weak
+priors on the magnitude of the motion (though it is sometimes assumed that
+other sources of motion estimation, such as markers, gyroscopes, or inertial
+measurement units are available). For this reason, much prior work treats the
+problem as unconstrained SLAM; where the pose of the sensor is mostly inferred
+from the change in the map as it is built online. Depending on the type of
+sensor, this can lead to severe pose drift over time.
+
+Robots, on the other hand, often have sensors mounted on actuated linkages, such
+as necks or arms. These linkages provide extremely strong priors on the motion
+of the sensor, due to their constrained kinematics. Consider the case of a robot
+with a hand-mounted 2D or 3D sensor. As the robot actuates its joints, the
+sensor moves in a highly predictable manner. If the joint angles of the robot
+are perfeclty known, and the robot is perfectly rigid, the problem of dense 3D
+reconstruction becomes a simple mapping problem rather than a SLAM problem.
+
+However, even kinematically constrained robotic linkages may have significant
+noise and systematic inaccuracies.  Hysteresis from relative joint encoders
+leads to inaccuracy that compounds over time; and on some systems, cable slack
+and nonrigid deformation prevent the robot from knowing its kinematics with
+certainty.  The \textit{Baxter} robot, for instance, has springy joints and
+deformable plastic links which significantly increase its kinematic uncertainty.
+The \textit{Barret WAM} robot arm is driven by cables, and has only relative
+joint encoders. Stretch in the cables results in systematic error that is
+configuration-dependant.
+
+We can correct for this uncertainty using the sensor mounted on the arm. Rather
+than estimating the pose of the sensor directly in the course of SLAM, we can
+estimate the joint angles of the robot instead; and hopefully arrive at a better
+pose estimate this way. If 3D sensors (such as RGB-D cameras, or lasers) are
+available, the solution is related to dense 3D odometry. We can use
+kinematically-constrained gradient descent to produce a pose estimate
+consistent with both the robot kinematics and the map. If only 2D sensors
+(cameras) are available, we can track features between each image frame, and
+estimate the joint angles of the robot which would produce the observed image motion.
+
+% \begin{itemize}
+%     \item Dense 3D reconstruction is useful in many robotics contexts such as
+%     scene understanding and planning.
+%     \item Typical dense 3D reconstruction techniques assume that nothing is
+%     known about how the sensor moves aside from weak priors on the magnitude of
+%     the motion, or else use inertial measurment units.
+%     \item For this reason, dense reconstruction is treated as an unconstrained
+%     SLAM problem, where the pose of the sensor is mostly inferred from the
+%     change in the map.
+%     \item This leads to significant pose drift.
+%     \item Robots, however, often have sensors mounted on actuated linkages, such
+%     as necks or arms. These provide very strong priors on the motion of the
+%     sensor due to their kinematics.
+%     \item Consider the case of a robot with a hand-mounted 2D or 3D sensor. The
+%     robot scans the scene and produces a 3D reconstruction.
+%     \item With perfectly known robot kinematics, this is easy, and the problem
+%     becomes one of simple mapping, rather than SLAM.
+%     \item However, even kinematically constrained robotic linkages may have
+%     significant noise and inaccuracies. Hysteresis from relative joint encoders
+%     leads to inaccuracies that compound over time, and on some systems, cable
+%     slack and nonrigid deformation prevent us from knowing the robot kinematics
+%     with certainty.
+%     \item We can correct for this uncertainty using the sensor mounted on the
+%     arm. 
+%     \item Rather than estimating the pose of the sensor directly, we can
+%     estimate the joint angles of the robot, and hopefully arrive at a better
+%     pose estimate this way.
+%     \item In 3D, the solution is related to dense 3D odometry. We can use
+%     kinematically-constrained gradient descent to produce a pose estimate.
+%     \item In 2D, the solution is related to visual odometry and visual servoing.
+%     We can compute feature tracks in the image, and then use the robot's image
+%     Jacobian to compute a change in joint angles.
+% \end{itemize}
+
+\chapter{Background}
 \section{3D Mapping and Localization}
 \begin{itemize}
     \item Discuss occupancy grids, point clouds, and the Truncated Signed
@@ -171,6 +242,9 @@ Thesis Proposal: Kinematically Constrained Dense 3D SLAM
     \item A Kinect-Fusion-like algorithm can be used to simultaneously track the
     robot's configuration and map its environment.
 \end{itemize}
+
+\chapter{Framework}
+
 
 \chapter{Research Questions}
 \begin{itemize}
