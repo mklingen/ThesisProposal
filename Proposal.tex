@@ -172,13 +172,25 @@ configuration-dependant.
 
 We can correct for this uncertainty using the sensor mounted on the arm. Rather
 than estimating the pose of the sensor directly in the course of SLAM, we can
-estimate the joint angles of the robot instead; and hopefully arrive at a better
-pose estimate this way. If 3D sensors (such as RGB-D cameras, or lasers) are
-available, the solution is related to dense 3D odometry. We can use
-kinematically-constrained gradient descent to produce a pose estimate
-consistent with both the robot kinematics and the map. If only 2D sensors
-(cameras) are available, we can track features between each image frame, and
-estimate the joint angles of the robot which would produce the observed image motion.
+estimate the \textit{joint angles of the robot} instead; and hopefully arrive
+at a better pose estimate this way. It is difficult to estimate the joint angles
+of the robot instead of the pose of the sensor due mainly two factors:
+first, there is a many-to-one mapping between joint angles and the pose of any
+rigidly attached link, and second, the mapping is nonlinear. This mapping has
+been studied extensively in robot motion planning and controls. By using
+techniques from unconstrained 3D SLAM, and writing them in terms of the
+configuration of the robot rather than direct 3D pose, we can track the pose of
+the robot arm and map the world simultaneously. 
+
+In particular, if a 3D (RGB-D or laser) sensor is used, 3D dense odometry
+methods can be directly applied to the joint angles of the robot. We believe
+that a simple mapping of the direct least-squares minimization technique made
+popular by \textit{Kinect Fusion} exists by use of the robot manipulator's
+Jacobian. Similarly, we believe that if only a 2D camera sensor is available,
+techniques from visual odometry (which use camera-space motion of tracked image
+features) can be applied to the robot's joint angles by use of the image
+Jacobian. We plan to enable dense 3D reconstruction using hand-mounted sensors
+on kinematically noisy robot arms using these techniques. 
 
 % \begin{itemize}
 %     \item Dense 3D reconstruction is useful in many robotics contexts such as
