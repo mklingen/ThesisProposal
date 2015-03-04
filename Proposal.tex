@@ -229,6 +229,9 @@ on kinematically noisy robot arms using these techniques.
 \chapter{Background}
 \section{3D Mapping and Localization}
 \begin{itemize}
+    \item Familiarize reader with the 3D mapping problem. Provide symbols.
+    \item Talk about the difference between odometry and global localization.
+    \item Discuss filtering.
     \item Discuss occupancy grids, point clouds, and the Truncated Signed
     Distance field
     \item A TSDf is a good idea to use in this context, because it implicitly
@@ -256,7 +259,32 @@ on kinematically noisy robot arms using these techniques.
 \end{itemize}
 
 \chapter{Framework}
-
+\section{Mapping}
+\subsection{Done So Far?}
+\begin{itemize}
+    \item Voxel carving
+    \item Chisel
+\end{itemize}
+\subsection{To Do?}
+\begin{itemize}
+    \item Find a more principled way of dealing with noise in the TSDF, rather
+    than averaging.
+\end{itemize}
+\section{Arm State Estimation}
+\subsection{Done So Far?}
+\begin{itemize}
+    \item 3D Arm tracking with an external sensor.
+    \item 2D experiments with gradient descent
+\end{itemize}
+\subsection{To Do?}
+\begin{itemize}
+    \item Lift the gradient descent to 3D.
+    \item Test on several actual robots
+    \item Explore alternative approaches to gradient descent.
+    \item Explore the 2D visual odometry version of the problem.
+    \item Model the joint angle uncertainty better, use this in a filter
+    somehow?
+\end{itemize}
 
 \chapter{Research Questions}
 \begin{itemize}
