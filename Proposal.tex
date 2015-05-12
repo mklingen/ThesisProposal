@@ -38,11 +38,33 @@
 \fvset{fontsize=\normalsize} % The font size of all verbatim text can be changed here
 
 \usepackage{xspace} % Used for printing a trailing space better than using a tilde (~) using the \xspace command
-
+\usepackage{amsmath}
 \newcommand{\blankpage}{\newpage\hbox{}\thispagestyle{empty}\newpage} % Command to insert a blank page
 \newcommand{\apriori}{\textit{a. priori \xspace}}
-\newcommand{\eg}{\textit{e. g.\xspace}}
-\newcommand{\ie}{\texit{i. e\xspace}}
+\newcommand{\eg}{\textit{e. g.}\xspace}
+\newcommand{\ie}{\textit{i. e}\xspace}
+\newcommand{\argmin}{\operatornamewithlimits{argmin}}
+\newcommand{\argmax}{\operatornamewithlimits{argmax}}
+\newcommand{\subsectionbf}[1]{\subsection{\textbf{#1}}}
+\newcommand{\sectionbf}[1]{\section{\textbf{#1}}}
+
+\newcount\colveccount
+\newcommand*\colvec[1]{
+        \global\colveccount#1
+        \begin{bmatrix}
+        \colvecnext
+}
+\def\colvecnext#1{
+        #1
+        \global\advance\colveccount-1
+        \ifnum\colveccount>0
+                \\
+                \expandafter\colvecnext
+        \else
+                \end{bmatrix}
+        \fi
+}
+
 %----------------------------------------------------------------------------------------
 %	BOOK META-INFORMATION
 %----------------------------------------------------------------------------------------
@@ -129,79 +151,168 @@
 
 %\cleardoublepage
 \chapter*{Introduction}
+In order to interact with and understand the world, robots must interpret and fuse noisy and ambiguous signals from their sensors. Consider the case of a multi-jointed robot arm with a 2D or 3D camera attached to its end effector. The robot receives noisy signals from its joint encoders, the hand-mounted camera, and other sensors. How can the robot make sense of the world given these noisy, heterogenous signals? How can it then take action based on this information? To successfully complete a task (such as grasping an object), it is critical that the robot have a consistent and accurate geometric representation of the world around it. 
+
 Dense 3D reconstruction is a well-studied problem in computer vision and robotics. Given a series of noisy sensor readings a unknown poses, the task is to infer the true geometric structure and color of the world. This  is a variant of the Simultaneous Localization and Mapping (SLAM) problem, since it requires simultaneously estimating the state of the sensor and the scene at once. In the context of robotic manipulation, dense 3D reconstruction is useful for scene understanding, planning, grasping, and more.
 
 Typical techniques for solving this problem focus on handheld sensors, and thus assume that little is known about the pose of the sensor aside from weak priors on the magnitude of the motion (though it is sometimes assumed that other sources of motion estimation, such as markers, gyroscopes, or inertial measurement units are available). For this reason, many prior works directly estimate the pose of a handheld sensor using visual (or depth) data alone.  Depending on the type of sensor, the lack of additional information can lead to inaccuracies in pose and ultimately  in the resulting 3D reconstruction. For instance, using a handheld RGB-D camera, it is impossible to detect motion parallel to a flat plane using the (unchanging) depth data alone, without additional sensors or \apriori knowledge of how the sensor moves.
 
-Robots, on the other hand, often have sensors mounted on actuated linkages, such as necks or arms. These linkages provide extremely strong cues of the sensor's motion, due to their constrained kinematics. Consider the case of a robot arm with a hand-mounted 2D or 3D sensor. As the robot actuates its joints, the sensor moves in a predictable manner. If the joint angles of the robot are perfeclty known, and the robot is perfectly rigid, the pose of the sensor is known with absolute certainty, and the problem of dense 3D reconstruction becomes a simple mapping problem rather than a full SLAM problem.
+On the other hand, robot linkages provide extremely strong cues of the sensor's motion, due to their constrained kinematics. As the robot actuates its joints, the sensor moves in a predictable manner. If the joint angles of the robot are perfeclty known, and the robot is perfectly rigid, the pose of the sensor is known with absolute certainty through forward kinematics. In this context, dense 3D reconstruction is a simple mapping problem rather than a full SLAM problem.
 
 However, even kinematically constrained robotic linkages may have significant noise and systematic inaccuracies. The use of relative joint encoders leads to inaccuracy that compounds over time; and on some systems, joint encoders are seperated from the actuation system by a mechanism with unpredictable dynamics.  The \textit{Baxter} robot, for instance, has series-elastic actuators and deformable plastic links which significantly increase its kinematic uncertainty. Another robot arm, the \textit{Barret WAM}, is driven by cables. Stretch in the cables results in systematic error that is configuration-dependant. In the extreme case, there may be degrees of freedom that are entirely unknown (such as the pose of the robot's base, or the extrinsic calibration of the sensor). One way of dealing with systematic error  is to calibrate the joint encoders to account for unknown dynamics and other sources of systematic error; but if additional unmodeled dynamics are introduced (such as a grasped object, or exterior forces),  the calibration will fail to capture them.
 
-We can correct for uncertainty,  unmodeled and systematic error simultaneously by using a visual sensor in addition to the robot's joint encoders. If the sensor is mounted externally, so that all or part of the robot is visible, the problem becomes the well-studied \textit{articulated tracking} problem. In this case, the robot's known kinematic model can be used in conjunction with visual sensor data to directly estimate the robot's configuration. However, we are interested primarily in \textit{hand-mounted} sensors which, for the most part, cannot see the actuator on which they're mounted. In this case, we can't rely on a known model of the world to estimate the robot's configuration.
+We can correct for uncertainty,  unmodeled and systematic error simultaneously by fusing visual data from the camera with the robot's joint encoder data. If the camera is mounted externally, so that all or part of the robot is visible, the problem becomes the well-studied \textit{articulated tracking} problem. In this case, the robot's known kinematic model can be used in conjunction with visual sensor data to directly estimate the robot's configuration. However, we are interested primarily in \textit{hand-mounted} sensors which, for the most part, cannot see the actuator on which they're mounted. In this case, we can't rely on a known model of the world to estimate the robot's configuration. Without this information, is it still possible to estimate the robot's configuration?
 
-Rather than estimating the pose of the sensor directly in the course of SLAM, we can estimate the \textit{joint angles of the robot} instead; and hopefully arrive at a better pose estimate this way. It is difficult to estimate the joint angles of the robot instead of the pose of the sensor due mainly two factors: first, there is a many-to-one mapping between joint angles and the pose of any rigidly attached link, and second, the mapping is nonlinear. This mapping has been studied extensively in robot motion planning and controls. By using techniques from unconstrained 3D SLAM, and writing them in terms of the configuration of the robot rather than direct 3D pose, we can track the pose of the robot arm and map the world simultaneously.
+We propose a method of simultaneously estimating the joint angles of a robot and a dense 3D map of the world around it by solving a constrained visual SLAM problem. Like the traditional 3D SLAM problem, we will assume no \apriori knowledge of the scene, and will have to take the sensor's pose uncertainty into account. Like the articulated tracking problem, we will leverage the known kinematic structure of the robot to strongly inform the sensor's pose. In some ways, this problem easier than the direct 6DOF SLAM problem, because the pose of the sensor is so tightly constrained by the robot's kinematics. However, since the inverse mapping between the sensor's pose and the robot's joint angles is nonlinear and underconstrained, translating 3D SLAM techniques to this domain will require work.
 
-In particular, if a 3D (RGB-D or laser) sensor is used, 3D dense odometry methods can be directly applied to the joint angles of the robot. We believe that a simple mapping of the direct least-squares minimization technique made popular by \textit{Kinect Fusion} exists by use of the robot manipulator's Jacobian. Similarly, we believe that if only a 2D camera sensor is available, techniques from visual odometry (which use camera-space motion of tracked image features) can be applied to the robot's joint angles by use of the image Jacobian. We plan to enable dense 3D reconstruction using hand-mounted sensors on kinematically noisy robot arms using these techniques.
+\chapter{Background and Framework}
+Consider our use case of a robot arm with an attached 2D or 3D camera. As the robot adctuates its joints, we wish to use the (noisy, incomplete) data from the camera in conjunction with the robot's (noisy, biased) joint encoders to simultaneously localize the robot and reconstruct a geometric representation of the robot's workspace. Solving this problem requires an understanding of the robot's kinematics, the mechanics of joint encoders, the characteristics of the sensor, and SLAM techniques.
 
-\chapter{Background}
-\section{3D Mapping and Localization}
-\begin{itemize}
-    \item Familiarize reader with the 3D mapping problem. Provide symbols.
-    \item Talk about the difference between odometry and global localization.
-    \item Discuss filtering.
-    \item Discuss occupancy grids, point clouds, and the Truncated Signed
-    Distance field
-    \item A TSDf is a good idea to use in this context, because it implicitly
-    contains gradient information.
-    \item Kinect Fusion gracefully localizes and maps simultaneously using the
-    TSDf as an objective function that informs the motion of the camera.
-\end{itemize}
+\sectionbf{Robot Kinematics}
+A \textit{kinematic linkage} consists of a series of rigid bodies (called \textit{links}) attached to one another through mechanisms (called \textit{joints}) that constrain their motion. A joint has between 1 and 6 degrees of freedom (DOF) which define how it constrains the motion of its attached links. For instance, a rotary joint has one degree of freedom that defines a pure rotation around an axis, while a ball joint has two to three degrees of freedom defining a pure rotation around 2 or more axes. The joint which constrains link $A$ to link $B$, and which has configuration $q_i$ has the transformation:
 
-\section{Robot Arm Kinematics and Tracking}
-\begin{itemize}
-    \item Robot linkages have well-defined kinematic constraints: joint limits,
-    and rigid forward kinematics.
-    \item When joint angles are known perfectly, the pose of any rigidly
-    attached object on the body (including the sensor) is known.
-    \item Nonrigid link deformation, hysterisis, and cable stretch can lead to
-    incorrect forward kinematics. On some robots (such as \textit{Baxter} and
-    some models of the \textit{Barret WAM}), this error is pronounced.
-    \item When an external sensor is used (disconnected from the robot), one can
-    track the configuration of the robot accurately.
-    \item Tracking the configuration of the robot with an \textit{attached}
-    sensor is less well studied -- though all visual servoing techniques
-    implicitly have to solve this problem.
-    \item A Kinect-Fusion-like algorithm can be used to simultaneously track the
-    robot's configuration and map its environment.
-\end{itemize}
+\begin{equation}
+T^{A}_{B}(q_i)\in SE(3)
+\end{equation}
 
-\chapter{Framework}
-\section{Mapping}
-\subsection{Done So Far?}
-\begin{itemize}
-    \item Voxel carving
-    \item Chisel
-\end{itemize}
-\subsection{To Do?}
-\begin{itemize}
-    \item Find a more principled way of dealing with noise in the TSDF, rather
-    than averaging.
-\end{itemize}
-\section{Arm State Estimation}
-\subsection{Done So Far?}
-\begin{itemize}
-    \item 3D Arm tracking with an external sensor.
-    \item 2D experiments with gradient descent
-\end{itemize}
-\subsection{To Do?}
-\begin{itemize}
-    \item Lift the gradient descent to 3D.
-    \item Test on several actual robots
-    \item Explore alternative approaches to gradient descent.
-    \item Explore the 2D visual odometry version of the problem.
-    \item Model the joint angle uncertainty better, use this in a filter
-    somehow?
-\end{itemize}
+\noindent and as $q_i$ changes, so does the transformation between links $A$ and $B$.
+
+We can represent a linkage as an undirected graph where vertexes are links, and the edges are joints between pairs of links. When the graph is acyclic, the linkage is said to be a \textit{kinematic tree}. For instance, a robot with two arms, a head, and a fixed base has a kinematic tree with three branches: one for each arm, and one for the head. Any link may be treated arbitrarily as the root of the tree.
+
+The transformation of any link $L_i$ with respect to a fixed reference frame $W$ can be calculated by traversing the kinematic tree and appending the transformations implied by each joint from the root of the tree (a process called \textit{forward kinematics}):
+
+\begin{equation}
+T^{W}_{L_i} = T^{L_{i - 1}}_{L_{i}}(q_{i - 1}) \ldots T^{L_1}_{L_2} (q_1)  T^{W}_{L_1}
+\end{equation}
+
+\noindent the path from the root to the link in question is called that link's \textit{kinematic chain}. The end of the kinematic chain is called the \textit{end effector}. In our case, we will use the reference frame of the camera as the end of the arm's kinematic chain.
+
+A robot's configuration $\mathbf{q} \in \mathbb{R^N}$ is a vector which concatenates all of its joints' degrees of fredom:
+
+\begin{equation}
+\mathbf{q} = \colvec{3}{q_1}{\vdots}{q_N}
+\end{equation}
+
+The partial derivative of link $i$'s reference frame with respect to $\mathbf{q}$:
+
+\begin{equation}
+\mathbf{J}_i(\mathbf{q}) = \frac{\partial}{\partial \mathbf{q}} T^{W}_{L_i}
+\end{equation}
+
+\noindent is called the link's \textit{kinematic Jacobian}, and for simple kinematic chains it can be computed in closed-form efficiently. The Jacobian is an important object for our problem, because it allows us to map instantaneous changes of the camera's pose to instantaneous changes in the robot's joints.
+
+\sectionbf{Depth Cameras}
+We are primarily interested in two kinds of sensors: 2D cameras and depth cameras. In both cases, the output is a 2D image. The relationship between 3D points in the scene and 2D points on a camera image can be modeled using the simple pinhole camera intrinsic model:
+
+\begin{equation}
+\text{Proj}(x, y, z)  =\colvec{2}{u}{v} = \colvec{2}{\frac{f_x x}{z} - c_x}{\frac{f_y y}{z} - c_y}
+\end{equation}
+
+\noindent where $u, v$ are the 2D images coordinates, $x, y, z$ are the 3D point's coordinates in the camera's frame of reference (with $x$ to the right, $y$ down, and $z$ forward), and $f_x, f_y, c_x, c_y$ are the intrinsic parameters of the camera. The set of all points in 3D space which project onto the camera is called the \textit{field of view} of the camera, and is usually approximated by a truncated pyramid (or \textit{frustum}).
+
+Depth cameras measure the range ($z$) at each image pixel to points in the scene. Projective depth cameras accomplish this by projecting a pattern of infrared light onto the scene and measuring the disparity of this pattern using an offset infrared camera. Time-of-flight cameras measure depth by directly shooting rays of infrared light at the scene and measuring the time it takes for the rays to reflect back to the sensor. In any case, the depth measured by depth cameras is noisy, incomplete, and contains systematic error.
+
+\sectionbf{Articulated Tracking}
+
+In practice, robots cannot directly measure their configuration, instead they must rely on sensors (called \textit{joint encoders}) which indirectly measure the configuration of their joints. Between the robot's joint encoder and the actual degree of freedom of the joint, there may be mechanisms with unmodeled dynamics (such as non-rigid links, springs, gear trains, or pulley systems) which prevent the robot from knowing its own configuration with certainty. For example, each joint of the \textit{Baxter} robot consists of a motor with plastic gearing, followed by a spring, followed by a rotating mechanism. In the extreme case (\eg human pose tracking or hand tracking), some degrees of freedom may be completely unknown, and can only be inferred through external sensing.
+
+Tracking articulated bodies with known kinematic structure using externally-mounted visual sensors is a well-studied topic in computer vision. For instance, commercial motion capture systems use markers (such as fiducials or reflective spheres) attached to articulated bodies along with an external camera to track the pose of human actors and objects in the scene. 
+
+When only the kinematic structure of the body is known, but no markers are available, the problem more difficult due to the unknown correspondences between sensor measurements and the body itself (\ie the \textit{segmentation problem}). But even in this case, efficient solutions for tracking articulated bodies exist. In general, given a series of sensor measurements from timestep $1$ to $(t - 1)$
+
+\begin{equation}
+Z_{1 \ldots ( t - 1)} = \{Z_1, Z_2, Z_3, \ldots, Z_{t - 1}\}
+\end{equation}
+
+\noindent the task is to estimate the configuration of the body at time $t$:
+
+\begin{equation}
+\mathbf{q}_t = \argmax_{\mathbf{q}} \text{P}\big(\mathbf{q} | Z_{1\ldots (t -1)}, \mathbf{q}_{1 \ldots (t - 1)} \big)
+\end{equation}
+
+If we assume the system has the Markov property, this reduces to merely finding the next configuration of the body given its previous configuration and sensor measurement:
+
+\begin{align}
+\mathbf{q}_t &= \argmax_{\mathbf{q}} \text{P}\big(\mathbf{q} | Z_{(t - 1)}, \mathbf{q}_{(t - 1)} \big) \\
+                    &= \argmax_{\mathbf{q}} \frac{\text{P}\big(Z_{(t - 1)} | \mathbf{q}, \mathbf{q}_{(t - 1)}\big) \text{P}(\mathbf{q} | \mathbf{q}_{(t - 1)})}{\text{P}(Z_{(t - 1)}, \mathbf{q}_{(t - 1)})} \\
+                    &= \argmax_{\mathbf{q}}\bigg[ \log \text{P}\big(Z_{(t - 1)} | \mathbf{q}, \mathbf{q}_{(t - 1)}\big) + \log  \text{P}\big(\mathbf{q} | \mathbf{q}_{(t - 1)}\big)\bigg]
+\end{align}
+
+\noindent the term $\text{P}\big(Z_{(t - 1)} | \mathbf{q}, \mathbf{q}_{(t - 1)}\big)$ represents the posterior probability that a sensor measurement was observed given some body configuration, while the term $\text{P}\big(\mathbf{q} | \mathbf{q}_{(t - 1)}\big)$ represents the prior probability of the body's configuration given its previous configuration (called the \textit{motion model}). Articulated tracking approaches differ mainly in how they compute these two 	quantities, as well as how they maximize them. 
+
+For instance, one method intended for tracking humans in 2D images, Articulated ICP, computes the posterior using image-based edge features, and maximizes the likelihood of a configuration by coordinate descent in configuration space. 
+
+One of our earlier works, Real-time Markerless Articulated Tracking (RMAT) tracks robots using a depth camera,  a simple posterior model that sensor measurements are near the robot's surface as projected onto the depth image, and a motion model which assumes the robot's configuration changes slowly between timesteps. Sensor measurements are matched to corresponding points on the robot's body using an octree, and gradient descent is used to maximize the likelihood of the robot's configuration given its previous configuration and depth image.
+
+A related but seperate work, Dense Articulated Real-time Tracking (DART), improves upon RMAT by using a signed distance field representation of the robot's body rather than an octree, a more complex motion model that considers joint velocity, and an extended Kalman filter for tracking. DART has been shown to effectively track robots, human hands, and rigid bodies in real-time with commercial depth cameras.
+
+As we shall see, the articulated tracking problem is a subset of the problem we wish to solve in this thesis. The requirement that the robot's sensor be able to see its own links greatly reduces the complexity of the problem, turning it into a tracking problem rather than a SLAM problem -- but the same techniques used to compute the robot's configuration from sensor measurements can be used even when the scene is unknown. 
+
+\sectionbf{Simultaneous Localization and Mapping}
+The Simultaneous Localization and Mapping (SLAM) problem involves concurrently estimating the pose of a moving sensor and the structure of the world around it when both are unknown. That is, given a sequence of noisy sensor readings
+
+\begin{equation}
+Z_{1 \ldots ( t - 1)} = \{Z_1, Z_2, Z_3, \ldots, Z_{t - 1}\}
+\end{equation}
+
+\noindent we wish to estimate the pose of the sensor at time $t$, $H \in SE(3)$ and the scene $M$:
+
+\begin{equation}
+ H_t, M_t = \argmax_{{H, M}} \text{P}\big(H, M \big| Z_{1\ldots (t-1)}, H_{1 \ldots (t - 1)}, M_{1 \ldots (t-1) } \big)
+\end{equation}
+
+\subsection{Sparse SLAM}
+Depending on the scene representation and sensor type, different approaches to solving this problem are appropriate. If the measurement model of the sensor consists of a sparse set of features (such as SIFT features, corner features, or related), a \textit{sparse} landmark-based scene representation is most appropriate. Sparse SLAM techniques build a globally-consistent graph of tracked landmarks (called a \textit{pose graph}) with pairwise edges on sensor motion between frames; and then optimize this pose graph based on a consistency metric. Since only a very small subset of the sensor data is used, this method can be made to work efficiently over very long datasets featuring loop closures. Specifically, the typical sparse SLAM pose graph has the form:
+
+\begin{equation}
+M_t = \{V, E\}
+\end{equation}
+
+\noindent where $V = \{v_1, \ldots, v_N\}$ is a colletion of vertices, with $v_i \in SE(3)$ as either a landmark pose or a sensor pose, and $E=\{e_1, \ldots, e_M\}$ is a collection of directed edges, with each edge defining a transformation $e_i = T_{v_a}^{v_b}$ from one vertex $v_a$ to another vertex $v_b$. A pose graph is said to be \textit{consistent} whenever each edge is consistent (\ie, whenever $v_a e_i  = v_b$). A \textit{loop closure} happens whenever two edges share the same outgoing vertex.
+
+\subsection{Dense SLAM}
+However, our use case calls for a robot to localize itself only in a very small workspace, and to use the reconstructed scene for geometric reasoning about objects for the purpose of manipulating them. For this use case, it is much more important to have a detailed geometric representation of the scene than it is to have consistent pose over very long distances. 
+
+Dense SLAM techniques, in contrast to sparse SLAM techniques, use all or most of the sensor data to reconstruct a geometric model of the scene. The dense model from time $t - 1$ is used to inform the pose of the sensor at time $t$, which is then used to construct the dense model at time $t$. This technique ensures that at all timesteps, a plausible geometric model taking into account all of the sensor data exists -- but consequently, the memory required to store the map at all timesteps is much larger than in landmark-based SLAM. Some dense methods (such as \textit{point fusion}) still manage to store a globally consistent pose graph as well as a geometric model by sacrificing some model quality, while most others (such as \textit{kinect fusion} and variants) store the map and pose only for time $t - 1$, and then maximize:
+
+\begin{align}
+H_t  &= \argmax_{H}\text{P}\big(H | H_{t - 1}, M_{t - 1}\big) 
+\end{align}
+
+\noindent before generating the current model $M_{t}$ from the previous model $M_{t - 1}$ and current pose  $H_{t}$. 
+
+A dense map representation of particular interest to our problem is the signed distance field (SDF). The SDF stores a function that gives the distance to the nearest surface in the scene:
+
+\begin{equation}
+\Phi(\mathbf{x}) = \min_{\mathbf{s} \in S} \| \mathbf{x} - \mathbf{s} \| \mathbf{I}(\mathbf{s})
+\end{equation}
+
+\noindent where $S \subseteq \mathbb{R}^3$ is the set of all occupied points in the scene, and 
+
+\begin{equation}
+\mathbf{I}(\mathbf{s}) = 
+\begin{cases}
+-1 &~\text{if} ~\mathbf{s}~\text{is inside an object} \\
++1&~\text{otherwise}
+\end{cases}
+\end{equation}
+
+
+\noindent $\Phi$ is negative inside objects, positive outside objects, and zero along the surface. The gradient $\nabla \Phi$ can be easily calculated,  and the representation very flexible, allowing $\Phi$ to represent many kinds of scenes. On the other hand, storing the SDF requires memory on the order of the volume of the scene.
+
+SDF-based dense SLAM techniques (such as \textit{kinect fusion} and variants) build $\Phi$ at time $t$ by fusing the depth image produced by the camera at time $t - 1$. A depth image can be fused into an SDF by computing a locally-linear approximation of the SDF for the depth image, and averaging it into the SDF computed at $t - 1$.  Since only one dense model is maintained at each timestep, errors in the model can compound over time.
+
+One of our earlier works, \textsc{Chisel}, explores techniques for efficiently building and storing the SDF used in dense SLAM, and extends the technique to mobile phones. In this thesis, we will be using \textsc{Chisel} as a backend dense mapping technique.
+
+\sectionbf{Kinematically Constrained SLAM}
+
+This gives us all the background needed to formulate the problem we will be exploring in this thesis. When the sensor mounted to the robot is outward-facing, and nothing is known about the world around the robot, how can we simultaneously estimate its configuration, and reconstruct the 3D geometry of the world? This is equivalent to the articulated tracking problem with an unknown world model, and also equivalent to the visual SLAM problem with additional constraints on the pose of the sensor.
+
+Given a series of joint encoder readings, $\mathbf{q}_1, \ldots, \mathbf{q}_{(t - 1)}$,  sensor measurements $Z_{1}, \ldots, Z_{(t - 1)}$, and prior world models $M_1, \ldots, M_{(t - 1)}$, we wish to simultaneously predict the current robot configuration and world model:
+
+\begin{equation}
+(\mathbf{q}_t, M_t) = \argmax_{\mathbf{q}, M} \text{P} \big( \mathbf{q}, M | \mathbf{q}_{1 \ldots (t - 1)}, M_{1 \ldots (t - 1)}, Z_{1 \ldots (t - 1)}\big)
+\end{equation}
 
 \chapter{Research Questions}
 \begin{itemize}
