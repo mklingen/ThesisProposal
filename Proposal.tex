@@ -37,28 +37,12 @@
 \usepackage{fancyvrb} % Allows customization of verbatim environments
 \fvset{fontsize=\normalsize} % The font size of all verbatim text can be changed here
 
-\newcommand{\hangp}[1]{\makebox[0pt][r]{(}#1\makebox[0pt][l]{)}} % New command to create parentheses around text in tables which take up no horizontal space - this improves column spacing
-\newcommand{\hangstar}{\makebox[0pt][l]{*}} % New command to create asterisks in tables which take up no horizontal space - this improves column spacing
-
 \usepackage{xspace} % Used for printing a trailing space better than using a tilde (~) using the \xspace command
 
-\newcommand{\monthyear}{\ifcase\month\or January\or February\or March\or April\or May\or June\or July\or August\or September\or October\or November\or December\fi\space\number\year} % A command to print the current month and year
-
-\newcommand{\openepigraph}[2]{ % This block sets up a command for printing an epigraph with 2 arguments - the quote and the author
-\begin{fullwidth}
-\sffamily\large
-\begin{doublespace}
-\noindent\allcaps{#1}\\ % The quote
-\noindent\allcaps{#2} % The author
-\end{doublespace}
-\end{fullwidth}
-}
-
 \newcommand{\blankpage}{\newpage\hbox{}\thispagestyle{empty}\newpage} % Command to insert a blank page
-
-\usepackage{makeidx} % Used to generate the index
-\makeindex % Generate the index which is printed at the end of the document
-
+\newcommand{\apriori}{\textit{a. priori \xspace}}
+\newcommand{\eg}{\textit{e. g.\xspace}}
+\newcommand{\ie}{\texit{i. e\xspace}}
 %----------------------------------------------------------------------------------------
 %	BOOK META-INFORMATION
 %----------------------------------------------------------------------------------------
@@ -119,11 +103,11 @@
 
 %----------------------------------------------------------------------------------------
 
-\listoffigures % Print a list of figures
+%\listoffigures % Print a list of figures
 
 %----------------------------------------------------------------------------------------
 
-\listoftables % Print a list of tables
+%\listoftables % Print a list of tables
 
 %----------------------------------------------------------------------------------------
 %	DEDICATION PAGE
@@ -143,64 +127,21 @@
 %	INTRODUCTION
 %----------------------------------------------------------------------------------------
 
-\cleardoublepage
-\chapter*{Introduction} % The asterisk leaves out this chapter from the table of contents
-Dense 3D reconstruction is a well-studied problem in computer vision and
-robotics. Given a series of noisy sensor readings a unknown poses, the task is
-to infer the true geometric structure and color of the world. This  is a
-variant of the Simultaneous Localization and Mapping (SLAM) problem, since it
-requires simultaneously estimating the state of the sensor and the scene at
-once. In the context of robotic manipulation, dense 3D reconstruction is useful for
-scene understanding, planning, grasping, and more. 
+%\cleardoublepage
+\chapter*{Introduction}
+Dense 3D reconstruction is a well-studied problem in computer vision and robotics. Given a series of noisy sensor readings a unknown poses, the task is to infer the true geometric structure and color of the world. This  is a variant of the Simultaneous Localization and Mapping (SLAM) problem, since it requires simultaneously estimating the state of the sensor and the scene at once. In the context of robotic manipulation, dense 3D reconstruction is useful for scene understanding, planning, grasping, and more.
 
-Typical techniques for solving this problem focus on handheld sensors, and thus
-assume that nothing is known about the pose of the sensor aside from weak
-priors on the magnitude of the motion (though it is sometimes assumed that
-other sources of motion estimation, such as markers, gyroscopes, or inertial
-measurement units are available). For this reason, much prior work treats the
-problem as unconstrained SLAM; where the pose of the sensor is mostly inferred
-from the change in the map as it is built online. Depending on the type of
-sensor, this can lead to severe pose drift over time.
+Typical techniques for solving this problem focus on handheld sensors, and thus assume that little is known about the pose of the sensor aside from weak priors on the magnitude of the motion (though it is sometimes assumed that other sources of motion estimation, such as markers, gyroscopes, or inertial measurement units are available). For this reason, many prior works directly estimate the pose of a handheld sensor using visual (or depth) data alone.  Depending on the type of sensor, the lack of additional information can lead to inaccuracies in pose and ultimately  in the resulting 3D reconstruction. For instance, using a handheld RGB-D camera, it is impossible to detect motion parallel to a flat plane using the (unchanging) depth data alone, without additional sensors or \apriori knowledge of how the sensor moves.
 
-Robots, on the other hand, often have sensors mounted on actuated linkages, such
-as necks or arms. These linkages provide extremely strong priors on the motion
-of the sensor, due to their constrained kinematics. Consider the case of a robot
-with a hand-mounted 2D or 3D sensor. As the robot actuates its joints, the
-sensor moves in a highly predictable manner. If the joint angles of the robot
-are perfeclty known, and the robot is perfectly rigid, the problem of dense 3D
-reconstruction becomes a simple mapping problem rather than a SLAM problem.
+Robots, on the other hand, often have sensors mounted on actuated linkages, such as necks or arms. These linkages provide extremely strong cues of the sensor's motion, due to their constrained kinematics. Consider the case of a robot arm with a hand-mounted 2D or 3D sensor. As the robot actuates its joints, the sensor moves in a predictable manner. If the joint angles of the robot are perfeclty known, and the robot is perfectly rigid, the pose of the sensor is known with absolute certainty, and the problem of dense 3D reconstruction becomes a simple mapping problem rather than a full SLAM problem.
 
-However, even kinematically constrained robotic linkages may have significant
-noise and systematic inaccuracies.  Hysteresis from relative joint encoders
-leads to inaccuracy that compounds over time; and on some systems, cable slack
-and nonrigid deformation prevent the robot from knowing its kinematics with
-certainty.  The \textit{Baxter} robot, for instance, has springy joints and
-deformable plastic links which significantly increase its kinematic uncertainty.
-The \textit{Barret WAM} robot arm is driven by cables, and has only relative
-joint encoders. Stretch in the cables results in systematic error that is
-configuration-dependant.
+However, even kinematically constrained robotic linkages may have significant noise and systematic inaccuracies. The use of relative joint encoders leads to inaccuracy that compounds over time; and on some systems, joint encoders are seperated from the actuation system by a mechanism with unpredictable dynamics.  The \textit{Baxter} robot, for instance, has series-elastic actuators and deformable plastic links which significantly increase its kinematic uncertainty. Another robot arm, the \textit{Barret WAM}, is driven by cables. Stretch in the cables results in systematic error that is configuration-dependant. In the extreme case, there may be degrees of freedom that are entirely unknown (such as the pose of the robot's base, or the extrinsic calibration of the sensor). One way of dealing with systematic error  is to calibrate the joint encoders to account for unknown dynamics and other sources of systematic error; but if additional unmodeled dynamics are introduced (such as a grasped object, or exterior forces),  the calibration will fail to capture them.
 
-We can correct for this uncertainty using the sensor mounted on the arm. Rather
-than estimating the pose of the sensor directly in the course of SLAM, we can
-estimate the \textit{joint angles of the robot} instead; and hopefully arrive
-at a better pose estimate this way. It is difficult to estimate the joint angles
-of the robot instead of the pose of the sensor due mainly two factors:
-first, there is a many-to-one mapping between joint angles and the pose of any
-rigidly attached link, and second, the mapping is nonlinear. This mapping has
-been studied extensively in robot motion planning and controls. By using
-techniques from unconstrained 3D SLAM, and writing them in terms of the
-configuration of the robot rather than direct 3D pose, we can track the pose of
-the robot arm and map the world simultaneously. 
+We can correct for uncertainty,  unmodeled and systematic error simultaneously by using a visual sensor in addition to the robot's joint encoders. If the sensor is mounted externally, so that all or part of the robot is visible, the problem becomes the well-studied \textit{articulated tracking} problem. In this case, the robot's known kinematic model can be used in conjunction with visual sensor data to directly estimate the robot's configuration. However, we are interested primarily in \textit{hand-mounted} sensors which, for the most part, cannot see the actuator on which they're mounted. In this case, we can't rely on a known model of the world to estimate the robot's configuration.
 
-In particular, if a 3D (RGB-D or laser) sensor is used, 3D dense odometry
-methods can be directly applied to the joint angles of the robot. We believe
-that a simple mapping of the direct least-squares minimization technique made
-popular by \textit{Kinect Fusion} exists by use of the robot manipulator's
-Jacobian. Similarly, we believe that if only a 2D camera sensor is available,
-techniques from visual odometry (which use camera-space motion of tracked image
-features) can be applied to the robot's joint angles by use of the image
-Jacobian. We plan to enable dense 3D reconstruction using hand-mounted sensors
-on kinematically noisy robot arms using these techniques. 
+Rather than estimating the pose of the sensor directly in the course of SLAM, we can estimate the \textit{joint angles of the robot} instead; and hopefully arrive at a better pose estimate this way. It is difficult to estimate the joint angles of the robot instead of the pose of the sensor due mainly two factors: first, there is a many-to-one mapping between joint angles and the pose of any rigidly attached link, and second, the mapping is nonlinear. This mapping has been studied extensively in robot motion planning and controls. By using techniques from unconstrained 3D SLAM, and writing them in terms of the configuration of the robot rather than direct 3D pose, we can track the pose of the robot arm and map the world simultaneously.
+
+In particular, if a 3D (RGB-D or laser) sensor is used, 3D dense odometry methods can be directly applied to the joint angles of the robot. We believe that a simple mapping of the direct least-squares minimization technique made popular by \textit{Kinect Fusion} exists by use of the robot manipulator's Jacobian. Similarly, we believe that if only a 2D camera sensor is available, techniques from visual odometry (which use camera-space motion of tracked image features) can be applied to the robot's joint angles by use of the image Jacobian. We plan to enable dense 3D reconstruction using hand-mounted sensors on kinematically noisy robot arms using these techniques.
 
 \chapter{Background}
 \section{3D Mapping and Localization}
@@ -216,7 +157,7 @@ on kinematically noisy robot arms using these techniques.
     TSDf as an objective function that informs the motion of the camera.
 \end{itemize}
 
-\section{Robot Kinematics and Arm Localization}
+\section{Robot Arm Kinematics and Tracking}
 \begin{itemize}
     \item Robot linkages have well-defined kinematic constraints: joint limits,
     and rigid forward kinematics.
@@ -294,6 +235,6 @@ on kinematically noisy robot arms using these techniques.
 
 %----------------------------------------------------------------------------------------
 
-\printindex % Print the index at the very end of the document
+%\printindex % Print the index at the very end of the document
 
 \end{document}
