@@ -240,6 +240,11 @@ If we assume the system has the Markov property, this reduces to merely finding 
 
 \noindent the term $\text{P}\big(Z_{(t - 1)} | \mathbf{q}, \mathbf{q}_{(t - 1)}\big)$ represents the posterior probability that a sensor measurement was observed given some body configuration, while the term $\text{P}\big(\mathbf{q} | \mathbf{q}_{(t - 1)}\big)$ represents the prior probability of the body's configuration given its previous configuration (called the \textit{motion model}). Articulated tracking approaches differ mainly in how they compute these two 	quantities, as well as how they maximize them. 
 
+\begin{figure}
+\includegraphics{img/graphical_model_tracking.pdf}
+\caption{A graphical model of the articulated tracking problem. Notice that the graph has the Markov property..}
+\end{figure}
+
 For instance, one method intended for tracking humans in 2D images, Articulated ICP, computes the posterior using image-based edge features, and maximizes the likelihood of a configuration by coordinate descent in configuration space. 
 
 One of our earlier works, Real-time Markerless Articulated Tracking (RMAT) tracks robots using a depth camera,  a simple posterior model that sensor measurements are near the robot's surface as projected onto the depth image, and a motion model which assumes the robot's configuration changes slowly between timesteps. Sensor measurements are matched to corresponding points on the robot's body using an octree, and gradient descent is used to maximize the likelihood of the robot's configuration given its previous configuration and depth image.
@@ -261,6 +266,11 @@ Z_{1 \ldots ( t - 1)} = \{Z_1, Z_2, Z_3, \ldots, Z_{t - 1}\}
  H_t, M_t = \argmax_{{H, M}} \text{P}\big(H, M \big| Z_{1\ldots (t-1)}, H_{1 \ldots (t - 1)}, M_{1 \ldots (t-1) } \big)
 \end{equation}
 
+\begin{figure}
+\includegraphics{img/graphical_model_slam.pdf}
+\caption{A graphical model of the SLAM problem. Note that given a known map, it has the Markov property.}
+\end{figure}
+
 \subsection{Sparse SLAM}
 Depending on the scene representation and sensor type, different approaches to solving this problem are appropriate. If the measurement model of the sensor consists of a sparse set of features (such as SIFT features, corner features, or related), a \textit{sparse} landmark-based scene representation is most appropriate. Sparse SLAM techniques build a globally-consistent graph of tracked landmarks (called a \textit{pose graph}) with pairwise edges on sensor motion between frames; and then optimize this pose graph based on a consistency metric. Since only a very small subset of the sensor data is used, this method can be made to work efficiently over very long datasets featuring loop closures. Specifically, the typical sparse SLAM pose graph has the form:
 
@@ -269,6 +279,11 @@ M_t = \{V, E\}
 \end{equation}
 
 \noindent where $V = \{v_1, \ldots, v_N\}$ is a colletion of vertices, with $v_i \in SE(3)$ as either a landmark pose or a sensor pose, and $E=\{e_1, \ldots, e_M\}$ is a collection of directed edges, with each edge defining a transformation $e_i = T_{v_a}^{v_b}$ from one vertex $v_a$ to another vertex $v_b$. A pose graph is said to be \textit{consistent} whenever each edge is consistent (\ie, whenever $v_a e_i  = v_b$). A \textit{loop closure} happens whenever two edges share the same outgoing vertex.
+
+\begin{figure}
+\includegraphics{img/pose_graph.pdf}
+\caption{An example of a pose graph.}
+\end{figure}
 
 \subsection{Dense SLAM}
 However, our use case calls for a robot to localize itself only in a very small workspace, and to use the reconstructed scene for geometric reasoning about objects for the purpose of manipulating them. For this use case, it is much more important to have a detailed geometric representation of the scene than it is to have consistent pose over very long distances. 
@@ -310,9 +325,14 @@ This gives us all the background needed to formulate the problem we will be expl
 
 Given a series of joint encoder readings, $\mathbf{q}_1, \ldots, \mathbf{q}_{(t - 1)}$,  sensor measurements $Z_{1}, \ldots, Z_{(t - 1)}$, and prior world models $M_1, \ldots, M_{(t - 1)}$, we wish to simultaneously predict the current robot configuration and world model:
 
-\begin{equation}
-(\mathbf{q}_t, M_t) = \argmax_{\mathbf{q}, M} \text{P} \big( \mathbf{q}, M | \mathbf{q}_{1 \ldots (t - 1)}, M_{1 \ldots (t - 1)}, Z_{1 \ldots (t - 1)}\big)
-\end{equation}
+\begin{align}
+(\mathbf{q}_t, M_t) &= \argmax_{\mathbf{q}, M} \text{P} \big( \mathbf{q}, M | \mathbf{q}_{1 \ldots (t - 1)}, M_{1 \ldots (t - 1)}, Z_{1 \ldots (t - 1)}\big)
+\end{align}
+
+\begin{figure}
+\includegraphics{img/graphical_model_constrained_slam.pdf}
+\caption{A graphical model of the kinematically constrained SLAM problem. It combines aspects of the articulated tracking problem and the SLAM problem..}
+\end{figure}
 
 \chapter{Research Questions}
 \begin{itemize}
