@@ -47,6 +47,7 @@
 \newcommand{\argmax}{\operatornamewithlimits{argmax}}
 \newcommand{\subsectionbf}[1]{\subsection{\textbf{#1}}}
 \newcommand{\sectionbf}[1]{\section{\textbf{#1}}}
+\newcommand{\figref}[1]{Fig.\xspace\ref{#1}\xspace}
 
 \newcount\colveccount
 \newcommand*\colvec[1]{
@@ -199,7 +200,9 @@ The partial derivative of link $i$'s reference frame with respect to $\mathbf{q}
 \mathbf{J}_i(\mathbf{q}) = \frac{\partial}{\partial \mathbf{q}} T^{W}_{L_i}
 \end{equation}
 
-\noindent is called the link's \textit{kinematic Jacobian}, and for simple kinematic chains it can be computed in closed-form efficiently. The Jacobian is an important object for our problem, because it allows us to map instantaneous changes of the camera's pose to instantaneous changes in the robot's joints.
+\noindent is called the link's \textit{kinematic Jacobian}, and for simple kinematic chains it can be computed in closed-form efficiently. The Jacobian is an important object for our problem, because it allows us to map instantaneous changes of the camera's pose to instantaneous changes in the robot's joints. 
+
+The robot can also control its joints. Control signals $\mathbf{u} \in \mathbb{R}^N$ are sent to the joints, causing them to move based on the robot's physical dynamics.
 
 \sectionbf{Depth Cameras}
 We are primarily interested in two kinds of sensors: 2D cameras and depth cameras. In both cases, the output is a 2D image. The relationship between 3D points in the scene and 2D points on a camera image can be modeled using the simple pinhole camera intrinsic model:
@@ -218,31 +221,33 @@ In practice, robots cannot directly measure their configuration, instead they mu
 
 Tracking articulated bodies with known kinematic structure using externally-mounted visual sensors is a well-studied topic in computer vision. For instance, commercial motion capture systems use markers (such as fiducials or reflective spheres) attached to articulated bodies along with an external camera to track the pose of human actors and objects in the scene. 
 
-When only the kinematic structure of the body is known, but no markers are available, the problem more difficult due to the unknown correspondences between sensor measurements and the body itself (\ie the \textit{segmentation problem}). But even in this case, efficient solutions for tracking articulated bodies exist. In general, given a series of sensor measurements from timestep $1$ to $(t - 1)$
+When only the kinematic structure of the body is known, but no markers are available, the problem more difficult due to the unknown correspondences between sensor measurements and the body itself (\ie the \textit{segmentation problem}). But even in this case, efficient solutions for tracking articulated bodies exist. In general, given a series of sensor measurements from timestep $1$ to $(t - 1)$, and control inputs
 
-\begin{equation}
-Z_{1 \ldots ( t - 1)} = \{Z_1, Z_2, Z_3, \ldots, Z_{t - 1}\}
-\end{equation}
+\begin{align}
+Z_{1 \ldots (t - 1)} &= \{Z_1, \ldots, Z_{t - 1}\} \\
+u_{1 \ldots (t - 1)} &= \{\mathbf{u}_1, \ldots \mathbf{u}_{t - 1}\}
+\end{align}
 
 \noindent the task is to estimate the configuration of the body at time $t$:
 
 \begin{equation}
-\mathbf{q}_t = \argmax_{\mathbf{q}} \text{P}\big(\mathbf{q} | Z_{1\ldots (t -1)}, \mathbf{q}_{1 \ldots (t - 1)} \big)
+\mathbf{q}_t = \argmax_{\mathbf{q}} \text{P}\big(\mathbf{q} | Z_{1\ldots (t -1)}, \mathbf{q}_{1 \ldots (t - 1)}, \mathbf{u}_{1 \ldots (t - 1)} \big)
 \end{equation}
 
 If we assume the system has the Markov property, this reduces to merely finding the next configuration of the body given its previous configuration and sensor measurement:
 
 \begin{align}
-\mathbf{q}_t &= \argmax_{\mathbf{q}} \text{P}\big(\mathbf{q} | Z_{(t - 1)}, \mathbf{q}_{(t - 1)} \big) \\
-                    &= \argmax_{\mathbf{q}} \frac{\text{P}\big(Z_{(t - 1)} | \mathbf{q}, \mathbf{q}_{(t - 1)}\big) \text{P}(\mathbf{q} | \mathbf{q}_{(t - 1)})}{\text{P}(Z_{(t - 1)}, \mathbf{q}_{(t - 1)})} \\
-                    &= \argmax_{\mathbf{q}}\bigg[ \log \text{P}\big(Z_{(t - 1)} | \mathbf{q}, \mathbf{q}_{(t - 1)}\big) + \log  \text{P}\big(\mathbf{q} | \mathbf{q}_{(t - 1)}\big)\bigg]
+\mathbf{q}_t &= \argmax_{\mathbf{q}} \text{P}\big(\mathbf{q} | Z_{(t - 1)}, \mathbf{q}_{(t - 1)}, \mathbf{u}_{(t - 1)} \big) \\
+                    &= \argmax_{\mathbf{q}} \frac{\text{P}\big(Z_{(t - 1)} | \mathbf{q}, \mathbf{q}_{(t - 1)},  \mathbf{u}_{(t - 1)} \big) \text{P}(\mathbf{q} | \mathbf{q}_{(t - 1)}, \mathbf{u}_{(t - 1)})}{\text{P}(Z_{(t - 1)}, \mathbf{q}_{(t - 1)}, \mathbf{u}_{(t - 1)})} \\
+                    &= \argmax_{\mathbf{q}}\bigg[ \log \text{P}\big(Z_{(t - 1)} | \mathbf{q}, \mathbf{q}_{(t - 1)},  \mathbf{u}_{(t - 1)} \big) + \log  \text{P}\big(\mathbf{q} | \mathbf{q}_{(t - 1)}, \mathbf{u}_{(t - 1)}\big)\bigg]
 \end{align}
 
-\noindent the term $\text{P}\big(Z_{(t - 1)} | \mathbf{q}, \mathbf{q}_{(t - 1)}\big)$ represents the posterior probability that a sensor measurement was observed given some body configuration, while the term $\text{P}\big(\mathbf{q} | \mathbf{q}_{(t - 1)}\big)$ represents the prior probability of the body's configuration given its previous configuration (called the \textit{motion model}). Articulated tracking approaches differ mainly in how they compute these two 	quantities, as well as how they maximize them. 
+\noindent the term $\text{P}\big(Z_{(t - 1)} | \mathbf{q}, \mathbf{q}_{(t - 1)},  \mathbf{u}_{(t - 1)} \big)$ represents the posterior probability that a sensor measurement was observed given some body configuration, while the term $\text{P}\big(\mathbf{q} | \mathbf{q}_{(t - 1)}, \mathbf{u}_{(t - 1)}\big)$ represents the prior probability of the body's configuration given its previous configuration (called the \textit{motion model}). Articulated tracking approaches differ mainly in how they compute these two 	quantities, as well as how they maximize them. 
 
 \begin{figure}
 \includegraphics{img/graphical_model_tracking.pdf}
-\caption{A graphical model of the articulated tracking problem. Notice that the graph has the Markov property..}
+\caption{A graphical model of the articulated tracking problem. Notice that the graph has the Markov property.}
+\label{fig:graphical_model_tracking}
 \end{figure}
 
 For instance, one method intended for tracking humans in 2D images, Articulated ICP, computes the posterior using image-based edge features, and maximizes the likelihood of a configuration by coordinate descent in configuration space. 
@@ -260,22 +265,23 @@ The Simultaneous Localization and Mapping (SLAM) problem involves concurrently e
 Z_{1 \ldots ( t - 1)} = \{Z_1, Z_2, Z_3, \ldots, Z_{t - 1}\}
 \end{equation}
 
-\noindent we wish to estimate the pose of the sensor at time $t$, $H \in SE(3)$ and the scene $M$:
+\noindent we wish to estimate the pose of the sensor at all times, $H_{1 \ldots t} \in SE(3)$ and the scene $M$:
 
 \begin{equation}
- H_t, M_t = \argmax_{{H, M}} \text{P}\big(H, M \big| Z_{1\ldots (t-1)}, H_{1 \ldots (t - 1)}, M_{1 \ldots (t-1) } \big)
+ H_{1..t}, M = \argmax_{{H, M}} \text{P}\big(H, M \big| Z_{1\ldots (t-1)}\big)
 \end{equation}
 
 \begin{figure}
 \includegraphics{img/graphical_model_slam.pdf}
-\caption{A graphical model of the SLAM problem. Note that given a known map, it has the Markov property.}
+\caption{A graphical model of the SLAM problem. Note that given a known map, it has the Markov property, and is just the tracking problem. Without a known map, all measurements are correlated.}
+\label{fig:graphical_model_slam}
 \end{figure}
 
 \subsection{Sparse SLAM}
 Depending on the scene representation and sensor type, different approaches to solving this problem are appropriate. If the measurement model of the sensor consists of a sparse set of features (such as SIFT features, corner features, or related), a \textit{sparse} landmark-based scene representation is most appropriate. Sparse SLAM techniques build a globally-consistent graph of tracked landmarks (called a \textit{pose graph}) with pairwise edges on sensor motion between frames; and then optimize this pose graph based on a consistency metric. Since only a very small subset of the sensor data is used, this method can be made to work efficiently over very long datasets featuring loop closures. Specifically, the typical sparse SLAM pose graph has the form:
 
 \begin{equation}
-M_t = \{V, E\}
+M = \{V, E\}
 \end{equation}
 
 \noindent where $V = \{v_1, \ldots, v_N\}$ is a colletion of vertices, with $v_i \in SE(3)$ as either a landmark pose or a sensor pose, and $E=\{e_1, \ldots, e_M\}$ is a collection of directed edges, with each edge defining a transformation $e_i = T_{v_a}^{v_b}$ from one vertex $v_a$ to another vertex $v_b$. A pose graph is said to be \textit{consistent} whenever each edge is consistent (\ie, whenever $v_a e_i  = v_b$). A \textit{loop closure} happens whenever two edges share the same outgoing vertex.
@@ -285,16 +291,19 @@ M_t = \{V, E\}
 \caption{An example of a pose graph.}
 \end{figure}
 
+This breaks up the graphical model (\figref{fig:graphical_model_slam}) so that sensor measurements are only corellated by shared landmarks, rather than all sensor measurements being corellated.
+
 \subsection{Dense SLAM}
 However, our use case calls for a robot to localize itself only in a very small workspace, and to use the reconstructed scene for geometric reasoning about objects for the purpose of manipulating them. For this use case, it is much more important to have a detailed geometric representation of the scene than it is to have consistent pose over very long distances. 
 
-Dense SLAM techniques, in contrast to sparse SLAM techniques, use all or most of the sensor data to reconstruct a geometric model of the scene. The dense model from time $t - 1$ is used to inform the pose of the sensor at time $t$, which is then used to construct the dense model at time $t$. This technique ensures that at all timesteps, a plausible geometric model taking into account all of the sensor data exists -- but consequently, the memory required to store the map at all timesteps is much larger than in landmark-based SLAM. Some dense methods (such as \textit{point fusion}) still manage to store a globally consistent pose graph as well as a geometric model by sacrificing some model quality, while most others (such as \textit{kinect fusion} and variants) store the map and pose only for time $t - 1$, and then maximize:
+Dense SLAM techniques, in contrast to sparse SLAM techniques, use all or most of the sensor data to reconstruct a geometric model of the scene. This technique ensures that at all timesteps, a plausible geometric model taking into account all of the sensor data exists -- but consequently, the memory required to store the map at all timesteps is much larger than in landmark-based SLAM. Some dense methods (such as \textit{point fusion}) still manage to store a globally consistent pose graph as well as a geometric model by sacrificing some model quality, while most others (such as \textit{kinect fusion} and variants) store the map and pose only for time $t - 1$, and then maximize:
 
 \begin{align}
+M_{t - 1} &= \argmax_{M}\text{P}\big(M | Z_{t - 1}, H_{t - 1}\big) \\
 H_t  &= \argmax_{H}\text{P}\big(H | H_{t - 1}, M_{t - 1}\big) 
 \end{align}
 
-\noindent before generating the current model $M_{t}$ from the previous model $M_{t - 1}$ and current pose  $H_{t}$. 
+\noindent before generating the current model $M_{t}$ from the previous model $M_{t - 1}$ and current pose  $H_{t}$, and so on. By only storing a single map, these dense techniques avoid having to store dense models for every frame. This simplification ignores the fact that the unknown map correlates all of the sensor readings together (\figref{fig:graphical_model_slam}), but results in systemic errors in pose/map estimation building up over time.
 
 A dense map representation of particular interest to our problem is the signed distance field (SDF). The SDF stores a function that gives the distance to the nearest surface in the scene:
 
@@ -323,16 +332,18 @@ One of our earlier works, \textsc{Chisel}, explores techniques for efficiently b
 
 This gives us all the background needed to formulate the problem we will be exploring in this thesis. When the sensor mounted to the robot is outward-facing, and nothing is known about the world around the robot, how can we simultaneously estimate its configuration, and reconstruct the 3D geometry of the world? This is equivalent to the articulated tracking problem with an unknown world model, and also equivalent to the visual SLAM problem with additional constraints on the pose of the sensor.
 
-Given a series of joint encoder readings, $\mathbf{q}_1, \ldots, \mathbf{q}_{(t - 1)}$,  sensor measurements $Z_{1}, \ldots, Z_{(t - 1)}$, and prior world models $M_1, \ldots, M_{(t - 1)}$, we wish to simultaneously predict the current robot configuration and world model:
+Given a series of sensor measurements $Z_{1}, \ldots, Z_{t}$ and control inputs $\mathbf{u}_{1}, \ldots, \mathbf{u}_{t}$, we wish to simultaneously estimate the trajectory of the robot's configuration $\mathbf{q}_1, \ldots \mathbf{q}_{t}$, and a dense model of the world $M$:
 
-\begin{align}
-(\mathbf{q}_t, M_t) &= \argmax_{\mathbf{q}, M} \text{P} \big( \mathbf{q}, M | \mathbf{q}_{1 \ldots (t - 1)}, M_{1 \ldots (t - 1)}, Z_{1 \ldots (t - 1)}\big)
-\end{align}
+\begin{equation}
+\mathbf{q}_1, \ldots, \mathbf{q}_t, M = \argmax_{\mathbf{q_{\ldots}}, M} \text{P}\big(\mathbf{q}_{\ldots}, M  | Z_{1 \ldots t}, \mathbf{u}_{1 \ldots t} \big)
+\end{equation}
 
 \begin{figure}
 \includegraphics{img/graphical_model_constrained_slam.pdf}
 \caption{A graphical model of the kinematically constrained SLAM problem. It combines aspects of the articulated tracking problem and the SLAM problem..}
 \end{figure}
+
+This problem is made difficult by the fact that the unknown map $M$ correlates all of the sensor measurements together. 
 
 \chapter{Research Questions}
 \begin{itemize}
