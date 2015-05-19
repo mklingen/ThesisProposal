@@ -369,6 +369,62 @@ This becomes a state estimation problem rather than a full SLAM problem, and the
 
 \noindent yielding two terms which must be maximized: a posterior term $\Prob \big(Z_t | \qvec, M\big)$, representing the likelihood of the sensor measurements given a robot configuration and known map,  and a prior term $\Prob \big (\qvec | \qvec_{t - 1}, \uvec_{t - 1})$, representing the likelihood of a robot configuration given its past configuration and control input. 
 
+\subsection{Prior Motion Model}
+
+The prior $\Prob \big (\qvec | \qvec_{t - 1}, \uvec_{t - 1})$ depends on the robot's dynamics, and its relationship to gravity and other external forces. In general, the forward dynamics model of a robot arm can be expressed using the well-known differential equation based on its Lagrangian:
+
+\begin{equation}
+\tau(\uvec) = \mathbf{M}(\qvec)\ddot{\qvec} + \mathbf{C}(\qvec, \dot{\qvec})\dot{\qvec} + \mathbf{G}(\qvec, \dot{\qvec}, F_{\text{ext}})
+\end{equation}
+
+\noindent where $\tau$ is the torque the robot produces at its joints given $\qvec$, $\mathbf{M}$ is a function representing the robot's mass projected into joint space, $\mathbf{C}$ is a function representing the internal corolis forces that the robot experiences, and $\mathbf{G}$ is a function representing how the robot responds to external forces $F_{\text{ext}}$ (usually gravity). 
+
+If this dynamics model were known perfectly, then the prior motion model would be completely deterministic, and indeed, no external sensors of any kind (not even joint encoders) would be needed to track its state over time. Unfortunately, the dynamics model of a robot manipulator is not easy to calculate, and depends on having a full account of external and internal forces the robot experiences. 
+
+These unmodeled dynamics can be mitigated in two ways: first, by treating them like noise in the motion model, and second, by using external sensors to account for them. At the very least, the dynamic model of the robot provides a narrow region of configuration space that the robot's configuration can be in, given its previous configuration and control input.
+
+\subsection{Motor Encoder Posterior}
+
+\begin{marginfigure}
+\includegraphics{img/motor_model.pdf}
+\caption{There is always some unknown mechanism between the method of actuation (a motor), and the physical robot degree of freedom. }
+\label{fig:motor_encoder}
+\end{marginfigure}
+
+\begin{marginfigure}
+\includegraphics{img/encoder_noise.pdf}
+\caption{A sketch of a hypothetical relationship between the motor encoders $\qvec^{(e)}$  and the physical joint angles $\qvec^{(j)}$, note that the relationship is multivariate, even though it is shown as one-dimensional here.}
+\label{fig:encoder_noise}
+\end{marginfigure}
+
+Robots invariably have sensors (called \textit{encoders}) mounted on their motors and/or joints. These sensors report a value $\qvec^{(e)}$ that correlates to the actual geometric joint angle  $\qvec^{(j)}$, but, due to the complications of an unknown intervening mechanism (\figref{fig:motor_encoder}), the encoder's reported value may have noise and systematic error (\figref{fig:encoder_noise}). For instance, the Barrett \textit{WAM} robot arm is cable-driven. Its' encoders are attached to its' motors, and a complicated system of cables and pulleys transmits torque from the motor to the joint. Unmodeled dynamics from stretch in the cable system leads to a discrepancy between $\qvec^{(e)}$ and $\qvec^{(j)}$.
+
+Define a simple probabalistic model:
+
+\begin{equation}
+\qvec^{(j)} = g( \qvec ^{(e)}) + \epsilon (\qvec^{(e)}) 
+\label{en:joint_prior}
+\end{equation}
+
+\noindent where $g : \mathbb{R}^N \to \mathbb{R}^N$ is a static calibration function that maps motor encoders to joint angles, and $\epsilon(\qvec^{(e)})$ is a random variable capturing the variance of the mapping from the motor encoders to joint angles (\figref{fig:encoder_noise}). This model may be learned by Gaussian Process Regression, or other regression techniques, when ground truth data is known.
+
+Initial tests carried out prior to this proposal on a Barret \textit{WAM} arm using optical joint encoders as ground truth have revealed that the mapping (\eqnref{en:joint_prior}) between the motor encoders and joint angles depends not only on the configuration of the robot, but also on the applied torque, the path that the robot has taken to get to a particular configuration, and other variables that are not easy to capture using a simple Gaussian model. 
+
+\subsection{Depth Sensor Posterior}
+
+The sensor posterior term, $\Prob \big(Z_t | \qvec, M\big)$, represents the likelihood of sensor measurements given a particular robot configuration $\qvec$ and dense map $M$. Here, the relevant work from dense 3D SLAM can be taken into account. Consider a depth camera mounted on the robot's end effector which can see portions of the dense map. The depth data can be modeled as cones, rays, or points. Since each depth pixel measurement is independent given the map and robot configuration, the likelihood of each ray, cone, or point, can be calculated independently.
+
+\begin{figure}
+\includegraphics{img/raycone.pdf}
+\caption{A cone/ray model of the depth sensor. The cone emenates from the sensor's focal point $\mathbf{o}$, with direction $\hat{n}_i$. It hits the surface of the scene at point $\mathbf{s}_i$ along its center. } 
+\end{figure}
+
+~\\
+
+\noindent\textbf{Cone Model}
+
+The depth camera can be modeled as a set of cones emenating from the camera's focal point -- one cone for each depth pixel. The cone is the swept volume of the depth pixel projected into the scene, and has a length equal to the depth pixel's measurement.
+
 \chapter{Research Questions}
 \begin{itemize}
     \item In robotic arms, what is the typical uncertainty we should expect, and
