@@ -54,6 +54,8 @@
 \newcommand{\qvec}{\mathbf{q}}
 \newcommand{\uvec}{\mathbf{u}}
 \newcommand{\xvec}{\mathbf{x}}
+\newcommand{\Proj}{\text{Proj}}
+\newcommand{\InvProj}{\text{Proj}^{-1}}
 
 \newcount\colveccount
 \newcommand*\colvec[1]{
@@ -91,7 +93,7 @@
 \frontmatter
 
 %----------------------------------------------------------------------------------------
-%	EPIGRAPH
+%	EPIGRAPH 
 %----------------------------------------------------------------------------------------
 
 % \thispagestyle{empty}
@@ -211,13 +213,17 @@ The partial derivative of link $i$'s reference frame with respect to $\qvec$:
 The robot can also control its joints. Control signals $\uvec \in \mathbb{R}^N$ are sent to the joints, causing them to move based on the robot's physical dynamics.
 
 \sectionbf{Depth Cameras}
-This work is primarily concerned with two kinds of sensors: 2D cameras and depth cameras. In both cases, the output is a 2D image. The relationship between 3D points in the scene and 2D points on a camera image can be modeled using the simple pinhole camera intrinsic model:
+This work is primarily concerned with two kinds of sensors: 2D cameras and depth cameras. In both cases, the output is a 2D image. Call the image $I_D$, it is a function with  domain $\Omega \in \mathbb{R}^2$. The relationship between 3D points in the scene and 2D points on a camera image can be modeled using the simple pinhole camera intrinsic model:
 
 \begin{equation}
-\text{Proj}(x, y, z)  =\colvec{2}{u}{v} = \colvec{2}{\frac{f_x x}{z} - c_x}{\frac{f_y y}{z} - c_y}
+\Proj(x, y, z)  =\colvec{2}{u}{v} = \colvec{2}{\frac{f_x x}{z} + c_x}{\frac{f_y y}{z} + c_y}
 \end{equation}
 
-\noindent where $u, v$ are the 2D images coordinates, $x, y, z$ are the 3D point's coordinates in the camera's frame of reference (with $x$ to the right, $y$ down, and $z$ forward), and $f_x, f_y, c_x, c_y$ are the intrinsic parameters of the camera. The set of all points in 3D space which project onto the camera is called the \textit{field of view} of the camera, and is usually approximated by a truncated pyramid (or \textit{frustum}).
+\noindent where $u, v$ are the 2D images coordinates, $x, y, z$ are the 3D point's coordinates in the camera's frame of reference (with $x$ to the right, $y$ down, and $z$ forward), and $f_x, f_y, c_x, c_y$ are the intrinsic parameters of the camera. The set of all points in 3D space which project onto the camera is called the \textit{field of view} of the camera, and is usually approximated by a truncated pyramid (or \textit{frustum}). We can also define the inverse projection model, which takes a camera coordinate $u, v$ and depth measurement $z$, and converts it into a 3D vector relative to the camera's focal point:
+
+\begin{equation}
+\InvProj(u, v, z) = z \colvec{3}{\frac{u - c_x}{f_x}}{\frac{v - c_y} {f_y}}{1}
+\end{equation}
 
 Depth cameras measure the range ($z$) at each image pixel to points in the scene. Projective depth cameras accomplish this by projecting a pattern of infrared light onto the scene and measuring the disparity of this pattern using an offset infrared camera. Time-of-flight cameras measure depth by directly shooting rays of infrared light at the scene and measuring the time it takes for the rays to reflect back to the sensor. In any case, the depth measured by depth cameras is noisy, incomplete, and contains systematic error.
 
@@ -410,20 +416,55 @@ Define a simple probabalistic model:
 
 Initial tests carried out prior to this proposal on a Barret \textit{WAM} arm using optical joint encoders as ground truth have revealed that the mapping (\eqnref{en:joint_prior}) between the motor encoders and joint angles depends not only on the configuration of the robot, but also on the applied torque, the path that the robot has taken to get to a particular configuration, and other variables that are not easy to capture using a simple Gaussian model. 
 
-\subsection{Depth Sensor Posterior}
+\subsection{Depth Camera Posterior}
 
 The sensor posterior term, $\Prob \big(Z_t | \qvec, M\big)$, represents the likelihood of sensor measurements given a particular robot configuration $\qvec$ and dense map $M$. Here, the relevant work from dense 3D SLAM can be taken into account. Consider a depth camera mounted on the robot's end effector which can see portions of the dense map. The depth data can be modeled as cones, rays, or points. Since each depth pixel measurement is independent given the map and robot configuration, the likelihood of each ray, cone, or point, can be calculated independently.
 
+~\\
+
 \begin{figure}
-\includegraphics{img/raycone.pdf}
-\caption{A cone/ray model of the depth sensor. The cone emenates from the sensor's focal point $\mathbf{o}$, with direction $\hat{n}_i$. It hits the surface of the scene at point $\mathbf{s}_i$ along its center. } 
+\includegraphics{img/pointcloud.pdf}
+\caption{A depth camera with focal point $\mathbf{o}$ and depth image $I_D$ projects points $\mathbf{z}_{u, v}$ into the scene.  All the points are expected to lie along surfaces where the signed distance to surfaces in the scene $\Phi = 0$.} 
+\label{fig:pointcloud}
 \end{figure}
+
+
+\noindent \textbf{Point Cloud Model}
+
+One of the simplest means of modeling the depth camera is to unproject each depth pixel into the scene as a point using the camera intrinsics. The result is the unstructured \textit{point cloud} of the depth image (\figref{fig:pointcloud}). So  the sensor measurement is:
+
+\begin{equation}
+Z = \InvProj\left(I_D [u, v]\right) = \mathbf{z}_{u, v} ~\forall [u, v] \in \Omega
+\end{equation}
+
+\noindent and due to the conditional independence of the depth image given a robot configuration and map, the posterior is:
+
+\begin{equation}
+\Prob \big(Z_t | \qvec, M\big) = \prod_{u, v \in \Omega} \Prob\big(\mathbf{z}_{u, v} | \qvec, M\big)
+\end{equation}
+
+Assume that the points in the point cloud are corrupted by simple isotropic Gaussian noise. If this is the case, 
+
+\begin{equation}
+\Prob\big(\mathbf{z}_{u, v} | \qvec, M\big) \propto \exp\left(-\Phi(\mathbf{z}_{u, v})\right)
+\end{equation}
+
+\noindent where $\Phi$ is the signed distance field representation of the scene $M$.
+
+This model, while simple, ignores occlusions. It makes no distinction between points behind obstacles and points in front of obstacles from the perspective of the camera. It also ignores the aniostropic (direction-dependant) nature of depth sensor noise. A more complicated model may be needed to correctly capture the depth camera posterior.
 
 ~\\
 
-\noindent\textbf{Cone Model}
+\begin{figure}
+\includegraphics{img/raycone.pdf}
+\caption{A cone/ray model of the depth camera. The cone emenates from the sensor's focal point $\mathbf{o}$, with direction $\hat{n}$. It hits the surface of the scene at point $\mathbf{\mathbf{z}_uv}$, which is distance $z$ along its center.} 
+\label{fig:raycone}
+\end{figure}
 
-The depth camera can be modeled as a set of cones emenating from the camera's focal point -- one cone for each depth pixel. The cone is the swept volume of the depth pixel projected into the scene, and has a length equal to the depth pixel's measurement.
+\noindent\textbf{Ray/Cone Cloud Model}
+
+The depth camera can be modeled as a set of cones emenating from the camera's focal point -- one cone for each depth pixel. The cone is the swept volume of the depth pixel projected into the scene, and has a length equal to the depth pixel's measurement (\figref{fig:raycone}). The cone may be seen as the union of all rays that pass through the depth pixel from the focal point of the camera.
+
 
 \chapter{Research Questions}
 \begin{itemize}
