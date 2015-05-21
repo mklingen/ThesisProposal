@@ -36,7 +36,7 @@
 
 \usepackage{fancyvrb} % Allows customization of verbatim environments
 \fvset{fontsize=\normalsize} % The font size of all verbatim text can be changed here
-\usepackage[]{algorithm2e}
+\usepackage[norelsize, linesnumbered, ruled, lined, boxed, commentsnumbered]{algorithm2e}
 \usepackage{xspace} % Used for printing a trailing space better than using a tilde (~) using the \xspace command
 \usepackage{amsmath}
 \newcommand{\blankpage}{\newpage\hbox{}\thispagestyle{empty}\newpage} % Command to insert a blank page
@@ -50,6 +50,7 @@
 \newcommand{\figref}[1]{Fig.\xspace\ref{#1}\xspace}
 \newcommand{\sref}[1]{\sidenote{See page \xspace \pageref{#1} \xspace}}
 \newcommand{\eqnref}[1]{Eq.\xspace\ref{#1}\xspace}
+\newcommand{\algref}[1]{Alg.\xspace\ref{#1}\xspace}
 \newcommand{\Prob}{\text{P}}
 \newcommand{\Expec}{\text{E}}
 \newcommand{\qvec}{\mathbf{q}}
@@ -57,6 +58,7 @@
 \newcommand{\xvec}{\mathbf{x}}
 \newcommand{\Proj}{\text{Proj}}
 \newcommand{\InvProj}{\text{Proj}^{-1}}
+
 
 \newcount\colveccount
 \newcommand*\colvec[1]{
@@ -181,7 +183,7 @@ Consider the use case of a robot arm with an attached 2D or 3D camera. As the ro
 
 \sectionbf{Robot Kinematics}
 \label{sec:robot_kinematics}
-A \textit{kinematic linkage} consists of a series of rigid bodies (called \textit{links}) attached to one another through mechanisms (called \textit{joints}) that constrain their motion. A joint has between 1 and 6 degrees of freedom (DOF) which define how it constrains the motion of its attached links. For instance, a rotary joint has one degree of freedom that defines a pure rotation around an axis, while a ball joint has two to three degrees of freedom defining a pure rotation around 2 or more axes. The joint which constrains link $A$ to link $B$, and which has configuration $q_i$ has the transformation:
+A \textit{kinematic linkage}\cite{Mason2001} consists of a series of rigid bodies (called \textit{links}) attached to one another through mechanisms (called \textit{joints}) that constrain their motion. A joint has between 1 and 6 degrees of freedom (DOF) which define how it constrains the motion of its attached links. For instance, a rotary joint has one degree of freedom that defines a pure rotation around an axis, while a ball joint has two to three degrees of freedom defining a pure rotation around 2 or more axes. The joint which constrains link $A$ to link $B$, and which has configuration $q_i$ has the transformation:
 
 \begin{equation}
 T^{A}_{B}(q_i)\in SE(3)
@@ -217,7 +219,7 @@ The robot can also control its joints. Control signals $\uvec \in \mathbb{R}^N$ 
 
 \sectionbf{Depth Cameras}
 \label{sec:depth_cameras}
-This work is primarily concerned with two kinds of sensors: 2D cameras and depth cameras. In both cases, the output is a 2D image. Call the image $I_D$, it is a function with  domain $\Omega \in \mathbb{R}^2$. The relationship between 3D points in the scene and 2D points on a camera image can be modeled using the simple pinhole camera intrinsic model:
+This work is primarily concerned with two kinds of sensors: 2D cameras and depth cameras. In both cases, the output is a 2D image. Call the image $I_D$, it is a function with  domain $\Omega \in \mathbb{R}^2$. The relationship between 3D points in the scene and 2D points on a camera image can be modeled using the simple pinhole camera intrinsic \cite{Hartley2004} model:
 
 \begin{equation}
 \Proj(x, y, z)  =\colvec{2}{u}{v} = \colvec{2}{\frac{f_x x}{z} + c_x}{\frac{f_y y}{z} + c_y}
@@ -266,20 +268,20 @@ If the system is assumed to have the Markov property (\ie the current state is c
 \label{fig:graphical_model_tracking}
 \end{figure}
 
-For instance, one method intended for tracking humans in 2D images, Articulated ICP, computes the posterior using image-based edge features, and maximizes the likelihood of a configuration by coordinate descent in configuration space. 
+For instance, one method intended for tracking humans in 2D images, Articulated ICP \cite{Mundermann2007}, computes the posterior using image-based edge features, and maximizes the likelihood of a configuration by coordinate descent in configuration space. 
 
-One of our earlier works, Real-time Markerless Articulated Tracking (RMAT) tracks robots using a depth camera,  a simple posterior model that sensor measurements are near the robot's surface as projected onto the depth image, and a motion model which assumes the robot's configuration changes slowly between timesteps. Sensor measurements are matched to corresponding points on the robot's body using an octree, and gradient descent is used to maximize the likelihood of the robot's configuration given its previous configuration and depth image.
+One of the author's earlier works, Real-time Markerless Articulated Tracking (RMAT)\cite{Klingensmith2013} tracks robots using a depth camera,  a simple posterior model that sensor measurements are near the robot's surface as projected onto the depth image, and a motion model which assumes the robot's configuration changes slowly between timesteps. Sensor measurements are matched to corresponding points on the robot's body using an octree, and gradient descent is used to maximize the likelihood of the robot's configuration given its previous configuration and depth image.
 
-A related but seperate work, Dense Articulated Real-time Tracking (DART), improves upon RMAT by using a signed distance field representation of the robot's body rather than an octree, a more complex motion model that considers joint velocity, and an extended Kalman filter for tracking. DART has been shown to effectively track robots, human hands, and rigid bodies in real-time with commercial depth cameras.
+A related but seperate work, Dense Articulated Real-time Tracking (DART) \cite{Schmidt2014}, improves upon RMAT by using a signed distance field representation of the robot's body rather than an octree, a more complex motion model that considers joint velocity, and an extended Kalman filter for tracking. DART has been shown to effectively track robots, human hands, and rigid bodies in real-time with commercial depth cameras.
 
 The articulated tracking problem is a subset of the problem this thesis will address. The requirement that the robot's sensor be able to see its own links greatly reduces the complexity of the problem, turning it into a tracking problem rather than a SLAM problem -- but the same techniques used to compute the robot's configuration from sensor measurements can be used even when the scene is unknown. 
 
 \sectionbf{Simultaneous Localization and Mapping}
 \label{sec:slam}
-The Simultaneous Localization and Mapping (SLAM) problem involves concurrently estimating the pose of a moving sensor and the structure of the world around it when both are unknown. That is, given a sequence of noisy sensor readings
+The Simultaneous Localization and Mapping (SLAM) problem \cite{Thrun2005} involves concurrently estimating the pose of a moving sensor and the structure of the world around it when both are unknown. That is, given a sequence of noisy sensor readings
 
 \begin{equation}
-Z_{1 \ldots t} = \{Z_1, Z_2, Z_3, \ldots, Z_t\}
+Z_{1 \ldots t} = \{Z_1, Z_2, Z_3, \ldots, Z_t\} 
 \end{equation}
 
 \noindent estimate the pose of the sensor at all times, $H_{1 \ldots t} \in SE(3)$ and the scene $M$:
@@ -315,7 +317,7 @@ This breaks up the graphical model (\figref{fig:graphical_model_slam}) so that s
 \label{sec:dense_slam}
 However, our use case calls for a robot to localize itself only in a very small workspace, and to use the reconstructed scene for geometric reasoning about objects for the purpose of manipulating them. For this use case, it is much more important to have a detailed geometric representation of the scene than it is to have consistent pose over very long distances. 
 
-Dense SLAM techniques, in contrast to sparse SLAM techniques, use all or most of the sensor data to reconstruct a geometric model of the scene. This technique ensures that at all timesteps, a plausible geometric model taking into account all of the sensor data exists -- but consequently, the memory required to store the map at all timesteps is much larger than in landmark-based SLAM. Some dense methods (such as \textit{point fusion}) still manage to store a globally consistent pose graph as well as a geometric model by sacrificing some model quality, while most others (such as \textit{kinect fusion} and variants) store the map and pose only for time $t - 1$, and then maximize:
+Dense SLAM techniques, in contrast to sparse SLAM techniques, use all or most of the sensor data to reconstruct a geometric model of the scene. This technique ensures that at all timesteps, a plausible geometric model taking into account all of the sensor data exists -- but consequently, the memory required to store the map at all timesteps is much larger than in landmark-based SLAM. Some dense methods (such as \textit{point fusion}\cite{Keller2013}) still manage to store a globally consistent pose graph as well as a geometric model by sacrificing some model quality, while most others (such as \textit{kinect fusion}\cite{KinectFusion} and variants) store the map and pose only for time $t - 1$, and then maximize:
 
 \begin{align}
 M_{t - 1} &= \argmax_{M}\Prob\big(M | Z_{t - 1}, H_{t - 1}\big) \\
@@ -324,7 +326,7 @@ H_t  &= \argmax_{H}\Prob\big(H | H_{t - 1}, M_{t - 1}\big)
 
 \noindent before generating the current model $M_{t}$ from the previous model $M_{t - 1}$ and current pose  $H_{t}$, and so on. By only storing a single map, these dense techniques avoid having to store dense models for every frame. This simplification ignores the fact that the unknown map correlates all of the sensor readings together (\figref{fig:graphical_model_slam}), but results in systemic errors in pose/map estimation building up over time.
 
-A dense map representation of particular interest to our problem is the signed distance field (SDF). The SDF stores a function that gives the distance to the nearest surface in the scene:
+A dense map representation of particular interest to our problem is the signed distance field (SDF) \cite{Curless1996}. The SDF stores a function that gives the distance to the nearest surface in the scene:
 
 \begin{equation}
 \Phi(\mathbf{x}) = \min_{\mathbf{s} \in S} \| \mathbf{x} - \mathbf{s} \| \mathbf{I}(\mathbf{s})
@@ -517,7 +519,7 @@ c(\qvec) =  \frac{1}{2}\sum_{[u, v] \in \Omega}\Phi(\mathbf{z}_{u, v}) ^2
  &= \sum_{[u, v] \in \Omega} \left[\Phi(\mathbf{z}_{u, v}) \mathbf{J}(\qvec, \mathbf{z}_{u, v})^T\nabla \Phi(\mathbf{z}_{u, v})\right]
 \end{align}
 
-\noindent where $ \mathbf{J}(\qvec, \mathbf{z}_{u, v}) \in \mathbb{R}^{3 \times N}$ is the manipulator's kinematic jacobian\sref{sec:robot_kinematics} evaluated for the point $\mathbf{z}_{u, v}$ as rigidly attached to the end effector.
+\noindent where $ \mathbf{J}(\qvec, \mathbf{z}_{u, v}) \in \mathbb{R}^{3 \times N}$ is the manipulator's kinematic jacobian\sref{sec:robot_kinematics} evaluated for the point $\mathbf{z}_{u, v}$ as rigidly attached to the end effector. The gradient of the SDF $\nabla \Phi$ is easy to approximate using finite differencing.
 
 \begin{figure}
 \includegraphics{img/robot_reconstruct.pdf}
@@ -527,7 +529,36 @@ c(\qvec) =  \frac{1}{2}\sum_{[u, v] \in \Omega}\Phi(\mathbf{z}_{u, v}) ^2
 
 This cost function and gradient has an interesting physical interpretation (\figref{fig:robot_reconstruct}). If all of the points in the point cloud are interpereted as being rigidly attached to the camera frame, and a force is applied at each of the points $\mathbf{z}_{u, v}$ with a force in the direction $\nabla\Phi(\mathbf{z}_{u, v})$ with magnitude $\Phi(\mathbf{z}_{u, v})$, the gradient $\nabla c$ is the same as the instantaneous acceleration the joints would experience from the sum of such forces.
 
-Now, the likelihood of $\qvec_t$ can be maximized using gradient descent of the cost function $c$ regularized by the motor encoders.
+The likelihood of $\qvec_t$ can be maximized using gradient descent of the cost function $c$ regularized by the motor encoders (\algref{alg:gradient_descent}). In this way, the robot's configuration stays near what is reported by its motor encoders, but is allowed to change in response to the sensor data.
+
+\begin{algorithm}
+
+\tcp{Where $\qvec_t^{(e)}$ are the motor encoders at time $t$,  $\lambda$ is a learning rate, and $\gamma$ is a regularization parameter.}
+\KwIn{$Z_{t}, \qvec_t^{(e)}, \qvec_{t - 1}, \Phi_{t - 1}, \lambda, \gamma$}
+
+\tcp{Initialize configuration offset $\epsilon \in \mathbb{R}^N$ to zero.}
+$\epsilon \gets \mathbf{0}$
+
+\Repeat{\text{convergence}}
+{
+    \tcp{Current estimate for $\qvec_t$ is the joint encoders plus the offset}
+	$\qvec_t \gets \qvec_t^{(e)} + \epsilon$
+	
+	\tcp{Compute the gradient of the sensor measurement posterior}
+	$\nabla c (\qvec_t) \gets  \sum_{[u, v] \in \Omega} \left[\Phi(\mathbf{z}_{u, v}) \mathbf{J}(\qvec_t, \mathbf{z}_{u, v})^T\nabla \Phi(\mathbf{z}_{u, v})\right]$
+	
+	\tcp{Descend the gradient regularized by $\gamma$}
+	$\epsilon \gets \epsilon - \lambda \nabla c (\qvec_t) - \gamma \epsilon$
+}
+
+\tcp{Now that there is a new estimate of $\qvec_t$, fuze the sensor data into the SDF.}
+$\Phi_{t} \gets \textsc{Fuse}(\Phi_{t - 1}, Z_{t}, \qvec_t)$
+
+\KwOut{$\qvec_t, \Phi_{t}$}
+
+\caption{Regularized Dense SDF Gradient Descent.}
+\label{alg:gradient_descent}
+\end{algorithm}
 
 \chapter{Research Questions}
 \begin{itemize}
@@ -556,7 +587,7 @@ Now, the likelihood of $\qvec_t$ can be maximized using gradient descent of the 
 %	BIBLIOGRAPHY
 %----------------------------------------------------------------------------------------
 
-\bibliography{bibliography} % Use the bibliography.bib file for the bibliography
+\bibliography{ArmSlam} % Use the bibliography.bib file for the bibliography
 \bibliographystyle{plainnat} % Use the plainnat style of referencing
 
 %----------------------------------------------------------------------------------------
