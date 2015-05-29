@@ -36,7 +36,9 @@
 
 \usepackage{fancyvrb} % Allows customization of verbatim environments
 \fvset{fontsize=\normalsize} % The font size of all verbatim text can be changed here
-\usepackage[norelsize, linesnumbered, ruled, lined, boxed, commentsnumbered]{algorithm2e}
+\usepackage[vlined, linesnumbered, ruled, lined, boxed, commentsnumbered]{algorithm2e}
+\newcommand\mycommfont[1]{\textcolor{gray}{#1}}
+\SetCommentSty{mycommfont}
 \usepackage{xspace} % Used for printing a trailing space better than using a tilde (~) using the \xspace command
 \usepackage{amsmath}
 \newcommand{\blankpage}{\newpage\hbox{}\thispagestyle{empty}\newpage} % Command to insert a blank page
