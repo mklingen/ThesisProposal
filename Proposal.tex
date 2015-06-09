@@ -50,6 +50,7 @@
 \newcommand{\subsectionbf}[1]{\subsection{\textbf{#1}}}
 \newcommand{\sectionbf}[1]{\section{\textbf{#1}}}
 \newcommand{\figref}[1]{Fig.\xspace\ref{#1}\xspace}
+\newcommand{\tableref}[1]{Table \xspace\ref{#1}\xspace}
 \newcommand{\sref}[1]{\sidenote{See page \xspace \pageref{#1} \xspace}}
 \newcommand{\eqnref}[1]{Eq.\xspace\ref{#1}\xspace}
 \newcommand{\algref}[1]{Alg.\xspace\ref{#1}\xspace}
@@ -347,10 +348,24 @@ A dense map representation of particular interest to our problem is the signed d
 
 \noindent $\Phi$ is negative inside objects, positive outside objects, and zero along the surface. The gradient $\nabla \Phi$ can be easily calculated,  and the representation very flexible, allowing $\Phi$ to represent many kinds of scenes. On the other hand, storing the SDF requires memory on the order of the volume of the scene.
 
-SDF-based dense SLAM techniques (such as \textit{kinect fusion} and variants) build $\Phi$ at time $t$ by fusing the depth image produced by the camera at time $t - 1$. A depth image can be fused into an SDF by computing a locally-linear approximation of the SDF for the depth image, and averaging it into the SDF computed at $t - 1$.  Since only one dense model is maintained at each timestep, errors in the model can compound over time.
+SDF-based dense SLAM techniques (such as \textit{kinect fusion} and variants) build $\Phi$ at time $t$ by fusing the depth image produced by the camera at time $t - 1$. A depth image can be fused into an SDF by computing a locally-linear approximation of the SDF for the depth image, and averaging it into the SDF computed at $t - 1$.  Since only one dense model is maintained at each timestep, errors in the model can compound over time. In practice, the SDF is computed only for a small region around the surfaces of objects (called the \textit{truncation region}). The result is the truncated signed distance field (TSDF).
 
-One of our earlier works, \textsc{Chisel}, explores techniques for efficiently building and storing the SDF used in dense SLAM, and extends the technique to mobile phones. This thesis will be using \textsc{Chisel} as a backend dense mapping technique.
- 
+One of the author's earlier works, \textsc{Chisel}\cite{Klingensmith2015}, explores techniques for efficiently building and storing the SDF used in dense SLAM, and extends the technique to mobile phones. This thesis will be using \textsc{Chisel} as a backend dense mapping technique.
+
+\section{Direct Monocular SLAM}
+
+For monocular cameras, techniques exist which combine the benefits of sparse and dense SLAM. These techniques (called direct, or direct semi-dense techniques) track the pose of a moving camera by directly minimizing the \textit{photometric error} between subsequent camera frames. This involves directly estimating the depth of pixels in the 2D camera image and reprojecting pixels from one frame onto another, and then maximizing the likelihood of the subsequent camera poses:
+
+\begin{equation}
+H_{t} = \argmin_{H} \big\| I_{t - 1}[Z_{t - 1}] - I_{t}[\Proj(H Z_{t - 1})]\big\|
+\end{equation}
+
+\noindent where $I$ is the camera image at a given time, and $Z_t$ is the point cloud as inferred by stereo matching between pose $H_t$ and $H_{t - 1}$. Examples of  direct techniques include \textsc{Orb-Slam}\cite{Murartal2015}, \textsc{Lsd-Slam}\cite{Engel2015}, and \textsc{Dtam} \cite{Newcombe2011}.
+
+Direct monocular methods, like sparse keypoint methods, are scale ambigous, and cannot distinguish between two scenes that differ only in scale. Like sparse keypoint methods,  they generally build a pose graph on top of the dense or semi-dense localization system.
+
+Unlike sparse keyframe-based algorithms, semi-dense direct techniques are capable of creating high-quality, dense 3D reconstructions. Unlike purely dense algorithms, they do not require a depth image to work. These qualities make semi-dense techniques attractive for this thesis. 
+
 \sectionbf{Kinematically Constrained SLAM}
 \label{sec:kin_slam}
 When the sensor mounted to the robot is outward-facing, and nothing is known about the world around the robot, how can the robot simultaneously estimate its configuration, and reconstruct the 3D geometry of the world? This is equivalent to the articulated tracking problem with an unknown world model, and also equivalent to the visual SLAM problem with additional constraints on the pose of the sensor.
@@ -480,7 +495,7 @@ This is a much more complex model, incorporating information about which points 
 
 \textbf{TODO: How to proceed with the ray model? I can make reference to my voxel carving work, and probably to DART, which has a beautiful symmetric interpretation of the passthrough information.}
 
-\subsection{Dense Sensor-To-Map Constrained SLAM}
+\sectionbf{Dense Sensor-To-Map Constrained SLAM}
 
 Given a model of the sensor posterior and motion model, and a dense signed distance field representation of the map, it is possible to formulate a simple dense \sref{sec:dense_slam} sensor-to-map algorithm for kinematically constrained SLAM. Using the point cloud posterior model \sref{subsec:point_cloud}, and a simple motion model which just assumes that the difference between the robot's configuration and the reported motor encoder readings \sref{sec:motion_prior}  $\|\qvec_t - \qvec_t^{e}\|$ is small, the problem can be treated as a simple optimization problem at each timestep.
 
@@ -554,13 +569,55 @@ $\epsilon \gets \mathbf{0}$
 }
 
 \tcp{Now that there is a new estimate of $\qvec_t$, fuze the sensor data into the SDF.}
-$\Phi_{t} \gets \textsc{Fuse}(\Phi_{t - 1}, Z_{t}, \qvec_t)$
-
+$\Phi_{t} \gets \textsc{FuseTSDF}(\Phi_{t - 1}, Z_{t}, \qvec_t)$
+ 
 \KwOut{$\qvec_t, \Phi_{t}$}
 
 \caption{Regularized Dense SDF Gradient Descent.}
 \label{alg:gradient_descent}
 \end{algorithm}
+
+\subsection{2D Simulation Experiments}
+The constrained descent algorithm (\algref{alg:gradient_descent}) can be illustrated by constructing a simple 2D simulation (\tableref{table:2d_experiments}). In the simulation, a 3-link serial robot manipulator with a simulated 1D depth sensor scans a scene. Zero-centered Perlin \cite{Perlin02} noise is added to its joint encoder readings. That is,
+
+\begin{equation}
+\qvec^{(e)}_{t} = \beta_n\textsc{Perlin}\big(s_n \qvec^{(j)}_{t}\big)
+\end{equation}
+
+\noindent where $s_n$ is a noise scale parameter, and $\beta_n$ is a noise magnitude parameter.  
+
+For the world model, a simple 2D truncated signed distance field (TSDF) is constructed. The performance of the constrained gradient descent algorithm (\algref{alg:gradient_descent}) is compared against a simple unconstrained descent algorithm which assumes the sensor can move and rotate freely, without considering the robot kinematics.
+
+\begin{figure}
+\includegraphics[width=1.0\textwidth]{img/2d_experiments/ee_error.pdf}
+\includegraphics[width=1.0\textwidth]{img/2d_experiments/class_error.pdf}
+\includegraphics[width=1.0\textwidth]{img/2d_experiments/tsdf_error.pdf}
+\caption{2D experiment (\tableref{table:2d_experiments}) data. Here, end effector error is the squared distance between the reported end effector position and ground truth. The model classification error is the proportion of TSDF voxels that are misclassified (full vs. empty), and the total TSDF error is the total squared difference between the ground truth distances and the reported distances.}
+\label{fig:2d_experiment_data}
+\end{figure}
+
+
+The robot scans the scene, and makes a single loop closure. When using the (noisy) joint encoders for pose only, much of the detail of the scene is lost, since the TSDF ($\Phi$) smooths out errors through averaging. Constrained gradient descent allows the robot to correct its joint encoder error and recapture fine details in the scene (though drift is still made apparent by the loop closure). Unconstrained gradient descent, on the other hand, causes the robot's estimate of the sensor pose to drift; and the 3D reconstruction is quickly destroyed as error accumulates (\figref{fig:2d_experiment_data}).
+
+\newcommand{\tabfigure}[1]{ \raisebox{-.5\height}{\includegraphics[width = 3.5cm, height = 3.5cm]{img/2d_experiments/2d_slam_#1.png}}}
+\newcommand{\tabrow}[1]{#1 & \tabfigure{groundtruth/#1} & \tabfigure{encoders/#1} & \tabfigure{constrained/#1} & \tabfigure{unconstrained/#1}} 
+\begin{table*}
+\caption{}
+\label{table:2d_experiments} 
+\begin{tabular}{ccccc}
+\toprule
+\bfseries Time & \bfseries Ground Truth & \bfseries Encoders & \bfseries Constrained & \bfseries Unconstrained \\
+\midrule
+\tabrow{250}\\
+\tabrow{500} \\
+\tabrow{750} \\
+\tabrow{1000}\\
+\tabrow{2000}\\ 
+\end{tabular}
+\\ 
+\smallskip\noindent\small Table \ref{table:2d_experiments} :
+{2D experiments. A 3-joint robot arm (dark red) scans the scene with a simulated depth camera (light grey lines). Its joint encoders are corrupted by noise (green). It builds up a TSDF, $\Phi$ (red and blue pixels) of the scene (black pixels). The ground truth is compared to just using the robot encoders, constrained descent (\algref{alg:gradient_descent}), and unconstrained descent over time.}
+\end{table*}  
 
 \chapter{Research Questions}
 \begin{itemize}
