@@ -180,7 +180,7 @@ Uncertainty and unmodeled systematic error can be corrected simultaneously by fu
 
 This work proposes a method of simultaneously estimating the joint angles of a robot and a dense 3D map of the world around it by solving a constrained visual SLAM problem. Like in the traditional 3D SLAM problem, this method assumes no \apriori knowledge of the scene, and will have to take the sensor's pose uncertainty into account. Like the articulated tracking problem, it leverages the known kinematic structure of the robot to strongly inform the sensor's pose. In some ways, kinematically constrained SLAM is easier than the direct 6DOF SLAM problem, because the pose of the sensor is so tightly constrained by the robot's kinematics. However, since the inverse mapping between the sensor's pose and the robot's joint angles is nonlinear and underconstrained, translating 3D SLAM techniques to this domain will require work.
 
-\chapter{Background and Framework}
+\chapter{Background}
 \label{chap:background}
 Consider the use case of a robot arm with an attached 2D or 3D camera. As the robot adctuates its joints, the algorithm must use the (noisy, incomplete) data from the camera in conjunction with the robot's (noisy, biased) joint encoders to simultaneously localize the robot and reconstruct a geometric representation of the robot's workspace. Solving this problem requires an understanding of the robot's kinematics, the mechanics of joint encoders, the characteristics of the sensor, and SLAM techniques.
 
@@ -348,7 +348,47 @@ A dense map representation of particular interest to our problem is the signed d
 
 \noindent $\Phi$ is negative inside objects, positive outside objects, and zero along the surface. The gradient $\nabla \Phi$ can be easily calculated,  and the representation very flexible, allowing $\Phi$ to represent many kinds of scenes. On the other hand, storing the SDF requires memory on the order of the volume of the scene.
 
-SDF-based dense SLAM techniques (such as \textit{kinect fusion} and variants) build $\Phi$ at time $t$ by fusing the depth image produced by the camera at time $t - 1$. A depth image can be fused into an SDF by computing a locally-linear approximation of the SDF for the depth image, and averaging it into the SDF computed at $t - 1$.  Since only one dense model is maintained at each timestep, errors in the model can compound over time. In practice, the SDF is computed only for a small region around the surfaces of objects (called the \textit{truncation region}). The result is the truncated signed distance field (TSDF).
+\begin{algorithm}
+\tcp{Given a depth image, sensor pose, previous SDF, previous voxel weights, a weighting function, a volume of interest, and a truncation distance}
+\KwIn{$I_D, H_t, \Phi_{t - 1}, W_{t - 1}, w,  V, \tau$}
+
+$H' \gets {H_t}^{-1}$
+
+\tcp{Initialize the new distance field and voxel weights}
+$\Phi_{t} \gets \Phi_{t - 1}$
+
+$W_{t} \gets W_{t - 1}$
+
+\tcp{For each voxel center in a volume of interest}
+\For{$\mathbf{v} \in V$}
+{
+    \tcp{Transform the voxel to the camera frame and project it on the depth image.}
+    $\mathbf{v}_h \gets H' \mathbf{v}$
+	
+	$d_i \gets I_D\left[\Proj(\mathbf{v}_h)\right]$
+	
+	\tcp{The geometric depth of the voxel to the camera plane.}
+	$d_v \gets \mathbf{v}_{h}(z)$
+	
+	\tcp{The difference between the geometric depth and the reported depth is a local approximation of the SDF}
+	$u \gets d_v - d_i$
+	
+	\tcp{If the local approximation is within the truncation distance\ldots}
+	\If{$|u| < \tau$}
+	{
+	    \tcp{Compute the weighted average with the previous SDF.}
+		$\Phi_{t}(\mathbf{v}) \gets \frac{W_{t}(\mathbf{v}) \Phi_{t}(\mathbf{v}) + w(u) u}{W_{t}(\mathbf{v}) + w(u)}$
+		
+		$W_{t}(\mathbf{v}) \gets W_t(\mathbf{v}) + w(u)$
+	}
+}
+ 
+\KwOut{$\Phi_{t}, W_{t}$}
+\caption{\textsc{FuseTSDF}}
+\label{alg:TSDF}
+\end{algorithm}
+
+SDF-based dense SLAM techniques (such as \textit{kinect fusion} and variants) build $\Phi$ at time $t$ by fusing the depth image produced by the camera at time $t - 1$. A depth image can be fused into an SDF by computing a locally-linear approximation of the SDF for the depth image, and averaging it into the SDF computed at $t - 1$.  Since only one dense model is maintained at each timestep, errors in the model can compound over time. In practice, the SDF is computed only for a small region around the surfaces of objects (called the \textit{truncation region}) for which the locally-linear approximation is good. The result is the truncated signed distance field (TSDF\cite{Curless1996}) (\algref{alg:TSDF}).
 
 One of the author's earlier works, \textsc{Chisel}\cite{Klingensmith2015}, explores techniques for efficiently building and storing the SDF used in dense SLAM, and extends the technique to mobile phones. This thesis will be using \textsc{Chisel} as a backend dense mapping technique.
 
@@ -366,7 +406,7 @@ Direct monocular methods, like sparse keypoint methods, are scale ambigous, and 
 
 Unlike sparse keyframe-based algorithms, semi-dense direct techniques are capable of creating high-quality, dense 3D reconstructions. Unlike purely dense algorithms, they do not require a depth image to work. These qualities make semi-dense techniques attractive for this thesis. 
 
-\sectionbf{Kinematically Constrained SLAM}
+\chapter{Framework: Kinematically Constrained SLAM}
 \label{sec:kin_slam}
 When the sensor mounted to the robot is outward-facing, and nothing is known about the world around the robot, how can the robot simultaneously estimate its configuration, and reconstruct the 3D geometry of the world? This is equivalent to the articulated tracking problem with an unknown world model, and also equivalent to the visual SLAM problem with additional constraints on the pose of the sensor.
 
@@ -401,7 +441,7 @@ This becomes a state estimation problem rather than a full SLAM problem, and the
 
 \noindent yielding two terms which must be maximized: a posterior term $\Prob \big(Z_t | \qvec, M\big)$, representing the likelihood of the sensor measurements given a robot configuration and known map,  and a prior term $\Prob \big (\qvec | \qvec_{t - 1}, \uvec_{t - 1})$, representing the likelihood of a robot configuration given its past configuration and control input. 
 
-\subsection{Prior Motion Model}
+\section{Prior Motion Model}
 \label{sec:motion_prior}
 The prior $\Prob \big (\qvec | \qvec_{t - 1}, \uvec_{t - 1})$ depends on the robot's dynamics, and its relationship to gravity and other external forces. In general, the forward dynamics model of a robot arm can be expressed using the well-known differential equation based on its Lagrangian:
 
@@ -415,7 +455,7 @@ If this dynamics model were known perfectly, then the prior motion model would b
 
 These unmodeled dynamics can be mitigated in two ways: first, by treating them like noise in the motion model, and second, by using external sensors to account for them. At the very least, the dynamic model of the robot provides a narrow region of configuration space that the robot's configuration can be in, given its previous configuration and control input.
 
-\subsection{Motor Encoder Posterior}
+\section{Motor Encoder Posterior}
 \label{sec:encoder_noise}
 \begin{marginfigure}
 \includegraphics{img/motor_model.pdf}
@@ -442,7 +482,7 @@ Define a simple probabalistic model:
 
 Initial tests carried out prior to this proposal on a Barret \textit{WAM} arm using optical joint encoders as ground truth have revealed that the mapping (\eqnref{en:joint_prior}) between the motor encoders and joint angles depends not only on the configuration of the robot, but also on the applied torque, the path that the robot has taken to get to a particular configuration, and other variables that are not easy to capture using a simple Gaussian model. 
 
-\subsection{Depth Camera Posterior}
+\section{Depth Camera Posterior}
 \label{sec:depth_cam_posterior}
 The sensor posterior term, $\Prob \big(Z_t | \qvec, M\big)$, represents the likelihood of sensor measurements given a particular robot configuration $\qvec$ and dense map $M$. Here, the relevant work from dense 3D SLAM can be taken into account. Consider a depth camera mounted on the robot's end effector which can see portions of the dense map. The depth data can be modeled as cones, rays, or points. Since each depth pixel measurement is independent given the map and robot configuration, the likelihood of each ray, cone, or point, can be calculated independently.
 
@@ -569,7 +609,7 @@ $\epsilon \gets \mathbf{0}$
 }
 
 \tcp{Now that there is a new estimate of $\qvec_t$, fuze the sensor data into the SDF.}
-$\Phi_{t} \gets \textsc{FuseTSDF}(\Phi_{t - 1}, Z_{t}, \qvec_t)$
+$\Phi_{t} \gets \textsc{FuseTSDF}(Z_{t}, F(\qvec_t), \Phi_{t - 1}, \ldots)$
  
 \KwOut{$\qvec_t, \Phi_{t}$}
 
@@ -577,7 +617,8 @@ $\Phi_{t} \gets \textsc{FuseTSDF}(\Phi_{t - 1}, Z_{t}, \qvec_t)$
 \label{alg:gradient_descent}
 \end{algorithm}
 
-\subsection{2D Simulation Experiments}
+\chapter{Experiments}
+\section{2D Simulation Experiments}
 The constrained descent algorithm (\algref{alg:gradient_descent}) can be illustrated by constructing a simple 2D simulation (\tableref{table:2d_experiments}). In the simulation, a 3-link serial robot manipulator with a simulated 1D depth sensor scans a scene. Zero-centered Perlin \cite{Perlin02} noise is added to its joint encoder readings. That is,
 
 \begin{equation}
@@ -625,7 +666,7 @@ The robot scans the scene, and makes a single loop closure. When using the (nois
 \label{fig:arm_track_3d_sim}
 \end{marginfigure}
 
-\subsection{3D Simulation Experiments}
+\section{3D Simulation Experiments}
 The same concept can be extended to 3D scenes (\figref{fig:arm_track_3d_sim}). We built a framework for doing dense sensor-to-model articulated tracking (\algref{alg:gradient_descent}) in 3D, as well as a depth sensor simulator. Like in the 2D experiments, the robot follows a fixed trajectory. Perlin noise is added to the joint encoders. The robot builds a 3D \textsc{TSDF} using the simulated depth data (\figref{fig:sim_depth}). \figref{fig:sim_3d_reconstructions} shows the result of the same robot trajectory and depth data being used to reconstruct a bookshelf without any joint encoder noise, with noise and dense articulated 3D tracking, and without any tracking. Even under conditions of extreme encoder noise, dense frame-to-model SLAM is able to create a high-qaulity 3D reconstructions of the scene. On the other hand, using the noisy encoders alone, the 3D reconstruction is almost totally unrecognizable.
 
 \begin{figure}
@@ -650,7 +691,7 @@ The same concept can be extended to 3D scenes (\figref{fig:arm_track_3d_sim}). W
 \label{fig:sim_3d_reconstructions}
 \end{marginfigure}
 
-\figref{fig:sim_3d_error} shows the translation error of the end effector vs. ground truth during tracking. The end effector error consistently converges to be beneath 2 cm even when the error due to noisy joint encoders is more than 11 cm. 
+\figref{fig:sim_3d_error} shows the translation error of the end effector vs. ground truth during tracking. The end effector error consistently converges to be beneath 2 cm even when the error due to noisy joint encoders is more than 11 cm.  
 
 
 \chapter{Research Questions}
