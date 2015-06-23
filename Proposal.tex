@@ -634,6 +634,7 @@ $\Phi_{t} \gets \textsc{FuseTSDF}(Z_{t}, F(\qvec_t), \Phi_{t - 1}, \ldots)$
 \end{algorithm} 
 
 \chapter{Experiments}
+\label{chap:experiments}
 \section{2D Simulation Experiments}
 The constrained descent algorithm (\algref{alg:gradient_descent}) can be illustrated by constructing a simple 2D simulation (\tableref{table:2d_experiments}). In the simulation, a 3-link serial robot manipulator with a simulated 1D depth sensor scans a scene. Zero-centered Perlin \cite{Perlin02} noise is added to its joint encoder readings. That is,
 
@@ -707,7 +708,9 @@ The same concept can be extended to 3D scenes (\figref{fig:arm_track_3d_sim}). W
 \label{fig:sim_3d_reconstructions}
 \end{marginfigure}
 
-\figref{fig:sim_3d_error} shows the translation error of the end effector vs. ground truth during tracking. The end effector error consistently converges to be beneath 2 cm even when the error due to noisy joint encoders is more than 11 cm.  
+\figref{fig:sim_3d_error} shows the translation error of the end effector vs. ground truth during tracking. The end effector error consistently converges to be beneath 2 cm even when the error due to noisy joint encoders is more than 11 cm. 
+
+The deficiencies of the simple gradient descent algorithm can be seen around timestep 500, 3000, etc. where the noisy encoders have better end effector accuracy than the tracking. This is because the prior motion model is too simple to account for high-frequency noise. 
 
 \chapter{Research Questions}
 \label{chap:research}
