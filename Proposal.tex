@@ -84,9 +84,7 @@
 %	BOOK META-INFORMATION
 %----------------------------------------------------------------------------------------
 
-\title{Kinematically\\
-		 Constrained\\
-         Dense 3D SLAM} % Title of the book
+\title{Articulated 3D SLAM} % Title of the book
 
 \author{Matthew Klingensmith} % Author
 
@@ -166,15 +164,21 @@
 
 %\cleardoublepage
 \chapter*{Introduction}
-In order to interact with and understand the world, robots must interpret and fuse noisy and ambiguous signals from their sensors. Consider the case of a multi-jointed robot arm with a 2D or 3D camera attached to its end effector. The robot receives noisy signals from its joint encoders, the hand-mounted camera, and other sensors. How can the robot make sense of the world given these noisy, heterogenous signals? How can it then take action based on this information? To successfully complete a task (such as grasping an object), it is critical that the robot have a consistent and accurate geometric representation of the world around it. 
+To interact with and understand the world, robots must interpret and fuse noisy and ambiguous signals from their sensors. Consider the case of a multi-jointed robot arm with a 2D or 3D camera attached to its end effector (\figref{fig:ada_cup}). The robot receives noisy signals from its joint encoders, the hand-mounted camera, and other sensors. How can the robot make sense of the world given these noisy, heterogenous signals? How can it then take action based on this information? To successfully complete a task (such as grasping an object), it is critical that the robot have a consistent and accurate geometric representation of the world around it. 
 
-Dense 3D reconstruction is a well-studied problem in computer vision and robotics. Given a series of noisy sensor readings a unknown poses, the task is to infer the true geometric structure and color of the world. This  is a variant of the Simultaneous Localization and Mapping (SLAM) problem \sref{sec:slam}, since it requires simultaneously estimating the state of the sensor and the scene at once. In the context of robotic manipulation, dense 3D reconstruction is useful for scene understanding, planning, grasping, and more.
+\begin{marginfigure}
+\includegraphics[width=1.0\textwidth]{img/ada_cup}
+\caption{The \textsc{Ada} robot with hand-mounted camera picking up a cup. }
+\label{fig:ada_cup}
+\end{marginfigure}
+
+Dense 3D reconstruction is a well-studied problem in computer vision and robotics. Given a series of noisy sensor readings a unknown poses, the task is to infer the true geometric structure and color of the world. This  is a variant of the Simultaneous Localization and Mapping (SLAM) problem \sref{sec:slam}, since it requires simultaneously estimating the state of the sensor and the scene at once. In the context of robotic manipulation, dense 3D reconstruction is useful for scene understanding, planning, grasping, and more. 
 
 Typical techniques for solving this problem focus on handheld sensors, and thus assume that little is known about the pose of the sensor aside from weak priors on the magnitude of the motion (though it is sometimes assumed that other sources of motion estimation, such as markers, gyroscopes, or inertial measurement units are available). For this reason, many prior works directly estimate the pose of a handheld sensor using visual (or depth) data alone.  Depending on the type of sensor, the lack of additional information can lead to inaccuracies in pose and ultimately  in the resulting 3D reconstruction. For instance, using a handheld depth amera, it is impossible to detect motion parallel to a flat plane using the (unchanging) depth data alone \sref{sec:dense_slam}, without additional sensors or \apriori knowledge of how the sensor moves.
 
 On the other hand, robot linkages provide extremely strong cues of the sensor's motion, due to their constrained kinematics \sref{sec:robot_kinematics}. As the robot actuates its joints, the sensor moves in a predictable manner. If the joint angles of the robot are perfeclty known, and the robot is perfectly rigid, the pose of the sensor is known with absolute certainty through forward kinematics. In this context, dense 3D reconstruction is a simple mapping problem rather than a full SLAM problem.
 
-However, even kinematically constrained robotic linkages may have significant noise and systematic inaccuracies \sref{sec:encoder_noise}. The use of relative joint encoders leads to inaccuracy that compounds over time; and on some systems, joint encoders are seperated from the actuation system by a mechanism with unpredictable dynamics.  The \textit{Baxter} (\figref{fig:baxter}) robot, for instance, has series-elastic actuators and deformable plastic links which significantly increase its kinematic uncertainty. Another robot arm, the \textit{Barret WAM}, is driven by cables. Stretch in the cables results in systematic error that is configuration-dependant. In the extreme case, there may be degrees of freedom that are entirely unknown (such as the pose of the robot's base, or the extrinsic calibration of the sensor). One way of dealing with systematic error  is to calibrate the joint encoders to account for unknown dynamics and other sources of systematic error; but if additional unmodeled dynamics are introduced (such as a grasped object, or exterior forces),  the calibration will fail to capture them.
+However, even articulated robotic linkages may have significant noise and systematic inaccuracies \sref{sec:encoder_noise}. The use of relative joint encoders leads to inaccuracy that compounds over time; and on some systems, joint encoders are seperated from the actuation system by a mechanism with unpredictable dynamics.  The \textit{Baxter} (\figref{fig:baxter}) robot, for instance, has series-elastic actuators and deformable plastic links which significantly increase its kinematic uncertainty. Another robot arm, the \textit{Barret WAM}, is driven by cables. Stretch in the cables results in systematic error that is configuration-dependant. In the extreme case, there may be degrees of freedom that are entirely unknown (such as the pose of the robot's base, or the extrinsic calibration of the sensor). One way of dealing with systematic error  is to calibrate the joint encoders to account for unknown dynamics and other sources of systematic error; but if additional unmodeled dynamics are introduced (such as a grasped object, or exterior forces),  the calibration will fail to capture them.
 
 \begin{marginfigure}
 \includegraphics{img/baxter_hand.png}
@@ -185,10 +189,13 @@ However, even kinematically constrained robotic linkages may have significant no
 
 Uncertainty and unmodeled systematic error can be corrected simultaneously by fusing visual data from the camera with the robot's joint encoder data. If the camera is mounted externally, so that all or part of the robot is visible, the problem becomes the well-studied \textit{articulated tracking} \sref{sec:articulated_tracking} problem. In this case, the robot's known kinematic model can be used in conjunction with visual sensor data to directly estimate the robot's configuration. However, this work is concerned primarily with \textit{hand-mounted} sensors which, for the most part, cannot see the actuator on which they're mounted. In this case, the localization algorithm can't rely on a known model of the world to estimate the robot's configuration. Without this information, is it still possible to estimate the robot's configuration?
 
-This work proposes a method of simultaneously estimating the joint angles of a robot and a dense 3D map of the world around it by solving a constrained visual SLAM problem \sref{sec:kin_slam}. Like in the traditional 3D SLAM problem, this method assumes no \apriori knowledge of the scene, and will have to take the sensor's pose uncertainty into account. Like the articulated tracking problem, it leverages the known kinematic structure of the robot to strongly inform the sensor's pose. In some ways, kinematically constrained SLAM is easier than the direct 6DOF SLAM problem, because the pose of the sensor is so tightly constrained by the robot's kinematics. However, since the inverse mapping between the sensor's pose and the robot's joint angles is nonlinear and underconstrained, translating 3D SLAM techniques to this domain will require work.
+This work proposes a method of simultaneously estimating the joint angles of a robot and a dense 3D map of the world around it by solving a constrained visual SLAM problem \sref{sec:kin_slam}. Like in the traditional 3D SLAM problem, this method assumes no \apriori knowledge of the scene, and will have to take the sensor's pose uncertainty into account. Like the articulated tracking problem, it leverages the known kinematic structure of the robot to strongly inform the sensor's pose.
 
-\chapter{Background}
-\label{chap:background}
+ In some ways, articulated SLAM is easier than the direct 6DOF SLAM problem, because the pose of the sensor is so tightly constrained by the robot's kinematics. However, since the inverse mapping between the sensor's pose and the robot's joint angles is nonlinear and underconstrained, translating 3D SLAM techniques to this domain will require work.
+ 
+This work includes a brief overview of theory and related works \sref{chap:background}, an outline of potential methods of solving the articulated SLAM problem \sref{chap:framework},  2D and 3D simulations and experiments \sref{chap:experiments} involving robots with depth sensors, and an outline of future work \sref{chap:research}.
+
+\chapter{Background}\label{chap:background}
 Consider the use case of a robot arm with an attached 2D or 3D camera. As the robot adctuates its joints, the algorithm must use the (noisy, incomplete) data from the camera in conjunction with the robot's (noisy, biased) joint encoders to simultaneously localize the robot and reconstruct a geometric representation of the robot's workspace. Solving this problem requires an understanding of the robot's kinematics, the mechanics of joint encoders, the characteristics of the sensor, and SLAM techniques.
 
 \sectionbf{Robot Kinematics}
@@ -413,7 +420,9 @@ Direct monocular methods, like sparse keypoint methods, are scale ambigous, and 
 
 Unlike sparse keyframe-based algorithms, semi-dense direct techniques are capable of creating high-quality, dense 3D reconstructions. Unlike purely dense algorithms, they do not require a depth image to work. These qualities make semi-dense techniques attractive for this thesis. 
 
-\chapter{Framework: Kinematically Constrained SLAM}
+\chapter{Framework}
+\label{chap:framework}
+\sectionbf{Articulated SLAM}
 \label{sec:kin_slam}
 When the sensor mounted to the robot is outward-facing, and nothing is known about the world around the robot, how can the robot simultaneously estimate its configuration, and reconstruct the 3D geometry of the world? This is equivalent to the articulated tracking problem with an unknown world model, and also equivalent to the visual SLAM problem with additional constraints on the pose of the sensor.
 
@@ -426,11 +435,11 @@ Given a series of sensor measurements $Z_{1}, \ldots, Z_{t}$ and control inputs 
 
 \begin{figure}
 \includegraphics{img/graphical_model_constrained_slam.pdf}
-\caption{A graphical model of the kinematically constrained SLAM problem. It combines aspects of the articulated tracking problem and the SLAM problem..}
+\caption{A graphical model of the articulated SLAM problem. It combines aspects of the articulated tracking problem and the SLAM problem..}
 \label{fig:graphical_model_constrained_slam}
 \end{figure}
 
-This problem is made difficult by the fact that the unknown map $M$ correlates all of the sensor measurements together (\figref{fig:graphical_model_constrained_slam}). First, consider the kinematically constrained tracking problem with a \textit{known} map. In this case, \eqnref{eqn:kin_slam} reduces to
+This problem is made difficult by the fact that the unknown map $M$ correlates all of the sensor measurements together (\figref{fig:graphical_model_constrained_slam}). First, consider the articulated tracking problem with a \textit{known} map. In this case, \eqnref{eqn:kin_slam} reduces to
 
 \begin{equation}
 \qvec_1, \ldots, \qvec_t= \argmax_{\mathbf{q_{\ldots}}} \Prob\big(\qvec_{\ldots} |M,  Z_{1 \ldots t}, \uvec_{1 \ldots t} \big)
@@ -544,7 +553,7 @@ This is a much more complex model, incorporating information about which points 
 
 \sectionbf{Dense Sensor-To-Map Constrained SLAM}
 \label{sec:dense_constrained_slam}
-Given a model of the sensor posterior and motion model, and a dense signed distance field representation of the map, it is possible to formulate a simple dense \sref{sec:dense_slam} sensor-to-map algorithm for kinematically constrained SLAM. Using the point cloud posterior model \sref{subsec:point_cloud}, and a simple motion model which just assumes that the difference between the robot's configuration and the reported motor encoder readings \sref{sec:motion_prior}  $\|\qvec_t - \qvec_t^{e}\|$ is small, the problem can be treated as a simple optimization problem at each timestep.
+Given a model of the sensor posterior and motion model, and a dense signed distance field representation of the map, it is possible to formulate a simple dense \sref{sec:dense_slam} sensor-to-map algorithm for articulated SLAM. Using the point cloud posterior model \sref{subsec:point_cloud}, and a simple motion model which just assumes that the difference between the robot's configuration and the reported motor encoder readings \sref{sec:motion_prior}  $\|\qvec_t - \qvec_t^{e}\|$ is small, the problem can be treated as a simple optimization problem at each timestep.
 
 \begin{align}
 \qvec_t &\gets \argmax_{\qvec}\Prob\big(\qvec | Z_{t}, M_{t - 1}, \qvec_{t - 1}\big) \\
@@ -700,12 +709,12 @@ The same concept can be extended to 3D scenes (\figref{fig:arm_track_3d_sim}). W
 
 \figref{fig:sim_3d_error} shows the translation error of the end effector vs. ground truth during tracking. The end effector error consistently converges to be beneath 2 cm even when the error due to noisy joint encoders is more than 11 cm.  
 
-
 \chapter{Research Questions}
+\label{chap:research}
 \begin{itemize}
     \item In robotic arms, what is the typical uncertainty we should expect, and
     where does it come from?
-    \item What benefit do we get out of using kinematically constrained dense
+    \item What benefit do we get out of using articulated dense
     odometry versus unconstrained dense odometry?
     \item Robot kinematics are underconstrained by sensor measurements, what
     pitfalls does this cause? How do we deal with this?
@@ -713,7 +722,7 @@ The same concept can be extended to 3D scenes (\figref{fig:arm_track_3d_sim}). W
 
 \chapter{Timeline}
 \begin{itemize}
-    \item Develop theory for kinematically constrained 3D visual odometry.
+    \item Develop theory for articulated 3D visual odometry.
     \item Run experiments in 2D simulation to verify theory
     \item Run experiments in 3D simulation to verify theory
     \item Get 3D dense odometry working on the ADA arm with fake joint noise
