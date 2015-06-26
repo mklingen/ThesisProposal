@@ -407,7 +407,7 @@ SDF-based dense SLAM techniques (such as \textit{kinect fusion} and variants) bu
 One of the author's earlier works, \textsc{Chisel}\cite{Klingensmith2015}, explores techniques for efficiently building and storing the SDF used in dense SLAM, and extends the technique to mobile phones. This thesis will be using \textsc{Chisel} as a backend dense mapping technique.
 
 \section{Direct Monocular SLAM}
-
+\label{sec:direct_slam}
 For monocular cameras, techniques exist which combine the benefits of sparse and dense SLAM. These techniques (called direct, or direct semi-dense techniques) track the pose of a moving camera by directly minimizing the \textit{photometric error} between subsequent camera frames. This involves directly estimating the depth of pixels in the 2D camera image and reprojecting pixels from one frame onto another, and then maximizing the likelihood of the subsequent camera poses:
 
 \begin{equation}
@@ -714,14 +714,40 @@ The deficiencies of the simple gradient descent algorithm can be seen around tim
 
 \chapter{Research Questions}
 \label{chap:research}
-\begin{itemize}
-    \item In robotic arms, what is the typical uncertainty we should expect, and
-    where does it come from?
-    \item What benefit do we get out of using articulated dense
-    odometry versus unconstrained dense odometry?
-    \item Robot kinematics are underconstrained by sensor measurements, what
-    pitfalls does this cause? How do we deal with this?
-\end{itemize}
+This thesis proposal has introduced a novel framework for doing 3D visual SLAM in articulated systems; but much further research is needed to investigate the theoretical grounding and concrete properties of this framework. Here are a few questions which must be answered by the thesis:
+
+\sectionbf{What applications are enabled by articulated SLAM?}
+
+Building high quality 3D reconstructions is one thing, but what can be done with the output of the articulated SLAM system? One possibility is to use the model to plan manipulation strategies (such as grasping and reaching into tight spaces), or to control the arm (\ie visual servoing). When the robot is no longer passively observing the model of the world, but instead can control where it places the sensor, the whole field of active perception opens up. How should the robot move to best reconstruct the scene?
+
+As interesting as these questions are, they will have to be secondary to the fundamental question of how to get the SLAM system to work in the first place. 
+
+\sectionbf{How can the encoder noise be modeled on real robot arms?}
+
+So far, we have only considered vague properties of encoder noise \sref{sec:encoder_noise} -- that it is really unmodeled dynamics causing the discrepency between joint encoders and the actual joint angles, and that it is likely configuration-dependant. In simulated experiments, we have modeled the noise using a random Perlin function \sref{chap:experiments}. But what exactly \textit{are} the unmodeled dynamics we are trying to capture? What physical processes cause them, and how can these physical processes be modeled?
+
+Answering this question will require a literature review of existing methods, data collection on real robots, and a framework for testing different dynamics models.
+
+\sectionbf{What are the limitations of dense camera-to-model SLAM using real data/robots?}
+
+So far, our experiments have only covered 2D and 3D simulated datasets. Obviously, real robots have unique challenges not addressed by the simulations: extrinsic/intrinsic calibration error, sensor noise, unmodeled dynamics, etc. We are eager to test articulated SLAM on a real robot. Experiments must be devised to test the convergence basin of the SLAM system. One particularly challenging component will be getting ground-truth data for the pose of the robot and geometric structure of the world (which are easy to get in simulation).
+
+\sectionbf{How can a pose graph be incorporated into the articulated SLAM framework?}
+
+So far, we have only derived dense camera-to-model 3D SLAM \sref{sec:dense_constrained_slam}. This approach works well for small workspaces when the displacement between camera poses is small, but fails over long trajectories and large workspaces. The camera-to-keyframe or pose graph methods \sref{sec:sparse_slam} correct for drift by globally optimizing the entire trajectory with respect to every keyframe. Incorporating a pose graph into the articulated SLAM problem would be an ideal way of correcting for drift.
+
+Answering this question will require re-deriving pose graph optimization in terms of \textit{robot configurations} rather than \textit{camera poses}.
+
+\sectionbf{How can direct monocular articulated SLAM be accomplished?}
+
+So far, we have only discussed solutions for dense camera-to-model 3D SLAM, which requires knowledge of a depth image at all time steps. How can we reconstruct a scene and estimate the robot's configuration when only a \textit{monocular} camera is available? Direct or semi-direct \sref{sec:direct_slam} SLAM is an attractive set of solutions for  3D reconstruction  using monocular cameras. Such methods rely on direct optimization in $SE(3)$ of camera poses given reprojected pixel intensities. 
+
+Answering this question will require constructing a direct image residual optimization technique in the configuration space of the robot, instead of in $SE(3)$. That is, we will have to derive the direct relationship between \textit{pixel intensities} and \textit{joint angle displacements}. 
+
+\sectionbf{Why articulated SLAM?}
+
+This is perhaps the biggest research question. What advantages does an articulated SLAM system have over a traditional unconstrained 6DOF SLAM system? We believe that doing SLAM directly in the natural space of the robot arm (its configuration space) is a more accurate and theoretically grounded way of solving the problem -- but data will have to be collected to verify this, comparing existing SLAM systems with their articulated counterparts.
+
 
 \chapter{Timeline}
 \begin{itemize}
