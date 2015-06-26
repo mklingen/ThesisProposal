@@ -29,6 +29,7 @@
 \usepackage{lipsum} % Inserts dummy text
 
 \usepackage{booktabs} % Better horizontal rules in tables
+\usepackage{arydshln}
 
 \usepackage{graphicx} % Needed to insert images into the document
 \graphicspath{{graphics/}} % Sets the default location of pictures
@@ -750,16 +751,32 @@ This is perhaps the biggest research question. What advantages does an articulat
 
 
 \chapter{Timeline}
-\begin{itemize}
-    \item Develop theory for articulated 3D visual odometry.
-    \item Run experiments in 2D simulation to verify theory
-    \item Run experiments in 3D simulation to verify theory
-    \item Get 3D dense odometry working on the ADA arm with fake joint noise
-    \item Attach a sensor to HERB's arm and do it with real noise.
-    \item Attach a sensor to Abhinav's Baxter robot
-    \item Extend theory to 2D visual odometry, and use Baxter's hand cam to
-    localize it.
-\end{itemize}
+I want to complete this thesis work in one year. I will be focusing my efforts on two major conference papers: one for ICRA 2016, and one for IROS 2016. Other conferences may be selected depending on how my research is going.
+
+\begin{table*}
+\begin{tabular}{lll}
+\toprule 
+\large Date &   & \large Conference \\
+\midrule 
+July 11, 2015 & Present \textsc{Chisel} at RSS. & RSS 2015\\
+\hdashline[0.5pt/5pt]
+August 2016 & Real experiments with dense frame-to-model tracking. & \\
+\hdashline[0.5pt/5pt]
+Sep 15, 2015 & Write paper on dense frame-to-model tracking.  & ICRA 2016  \\
+\hdashline[0.5pt/5pt]
+Fall 2015 & Begin implementing direct monocular system. & \\
+\hdashline[0.5pt/5pt]
+Mar 1, 2016 & Write paper on direct monocular system. &  IROS 2016 \\
+\hdashline[0.5pt/5pt]
+Spring 2016 & Implement pose graph. \\
+\hdashline[0.5pt/5pt]
+June 8, 2016 & Finish and defend this thesis & \\
+\bottomrule 
+\end{tabular}
+\end{table*}
+
+The first paper will focus on dense camera-to-model SLAM \sref{sec:dense_constrained_slam}, and will theoretical ground it, and provide results against other (non-articulated) SLAM algorithms. The second paper will focus on a direct monocular method \sref{sec:direct_slam}. Finally, I will look at incorporating a pose graph \sref{sec:sparse_slam}. Work from these conference papers will be incorporated into the thesis.
+
 \backmatter
 
 %----------------------------------------------------------------------------------------
