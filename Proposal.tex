@@ -85,7 +85,8 @@
 %	BOOK META-INFORMATION
 %----------------------------------------------------------------------------------------
 
-\title{Articulated 3D SLAM} % Title of the book
+\title{Thesis Proposal: \\
+Articulated 3D SLAM} % Title of the book
 
 \author{Matthew Klingensmith} % Author
 
@@ -165,13 +166,13 @@
 
 %\cleardoublepage
 \chapter*{Introduction}
-To interact with and understand the world, robots must interpret and fuse noisy and ambiguous signals from their sensors. Consider the case of a multi-jointed robot arm with a 2D or 3D camera attached to its end effector (\figref{fig:ada_cup}). The robot receives noisy signals from its joint encoders, the hand-mounted camera, and other sensors. How can the robot make sense of the world given these noisy, heterogenous signals? How can it then take action based on this information? To successfully complete a task (such as grasping an object), it is critical that the robot have a consistent and accurate geometric representation of the world around it. 
+To interact with and understand the world, robots must interpret and fuse noisy and ambiguous signals from their sensors. Consider the case of a multi-jointed robot arm with a 2D or 3D camera attached to its end effector (\figref{fig:ada_cup}). The robot receives noisy signals from its joint encoders, the hand-mounted camera, and other sensors. How can the robot make sense of the world given these noisy, heterogenous signals? How can it then take action based on this information? To successfully complete a task (such as grasping an object), it is critical that the robot have an accurate geometric representation of the world around it. 
 
-\begin{marginfigure}
-\includegraphics[width=1.0\textwidth]{img/ada_cup}
-\caption{The \textsc{Ada} robot with hand-mounted camera picking up a cup. }
+\begin{figure}
+\includegraphics[width=1.0\textwidth]{img/ADA/dracula_far_3.JPG}
+\caption{The \textsc{Ada} robot with hand-mounted camera manipulating a book in a cluttered bookshelf.}
 \label{fig:ada_cup}
-\end{marginfigure}
+\end{figure}
 
 Dense 3D reconstruction is a well-studied problem in computer vision and robotics. Given a series of noisy sensor readings a unknown poses, the task is to infer the true geometric structure and color of the world. This  is a variant of the Simultaneous Localization and Mapping (SLAM) problem \sref{sec:slam}, since it requires simultaneously estimating the state of the sensor and the scene at once. In the context of robotic manipulation, dense 3D reconstruction is useful for scene understanding, planning, grasping, and more. 
 
@@ -342,7 +343,7 @@ M_{t - 1} &= \argmax_{M}\Prob\big(M | Z_{t - 1}, H_{t - 1}\big) \\
 H_t  &= \argmax_{H}\Prob\big(H | H_{t - 1}, M_{t - 1}\big) 
 \end{align}
 
-\noindent before generating the current model $M_{t}$ from the previous model $M_{t - 1}$ and current pose  $H_{t}$, and so on. By only storing a single map, these dense techniques avoid having to store dense models for every frame. This simplification ignores the fact that the unknown map correlates all of the sensor readings together (\figref{fig:graphical_model_slam}), but results in systemic errors in pose/map estimation building up over time.
+\noindent before generating the current model $M_{t}$ from the previous model $M_{t - 1}$ and current pose  $H_{t}$, and so on. By only storing a single map, these dense techniques avoid having to store dense models for every frame. This simplification ignores the fact that the unknown map correlates all of the sensor readings together (\figref{fig:graphical_model_slam}), but results in systemic errors in pose/map estimation building up over time. 
 
 A dense map representation of particular interest to our problem is the signed distance field (SDF) \cite{Curless1996}. The SDF stores a function that gives the distance to the nearest surface in the scene:
 
@@ -403,7 +404,7 @@ $W_{t} \gets W_{t - 1}$
 \label{alg:TSDF}
 \end{algorithm}
 
-SDF-based dense SLAM techniques (such as \textit{kinect fusion} and variants) build $\Phi$ at time $t$ by fusing the depth image produced by the camera at time $t - 1$. A depth image can be fused into an SDF by computing a locally-linear approximation of the SDF for the depth image, and averaging it into the SDF computed at $t - 1$.  Since only one dense model is maintained at each timestep, errors in the model can compound over time. In practice, the SDF is computed only for a small region around the surfaces of objects (called the \textit{truncation region}) for which the locally-linear approximation is good. The result is the truncated signed distance field (TSDF\cite{Curless1996}) (\algref{alg:TSDF}).
+ In practice, the SDF is computed only for a small region around the surfaces of objects (called the \textit{truncation region}) for which the locally-linear approximation is good. The result is the truncated signed distance field (TSDF\cite{Curless1996}) (\algref{alg:TSDF}). TSDF-based dense SLAM techniques (such as \textit{kinect fusion} and variants) build $\Phi$ at time $t$ by fusing the depth image produced by the camera at time $t - 1$. A depth image can be fused into an SDF by computing a locally-linear approximation of the SDF for the depth image, and averaging it into the SDF computed at $t - 1$.  Since only one dense model is maintained at each timestep, errors in the model can compound over time.
 
 One of the author's earlier works, \textsc{Chisel}\cite{Klingensmith2015}, explores techniques for efficiently building and storing the SDF used in dense SLAM, and extends the technique to mobile phones. This thesis will be using \textsc{Chisel} as a backend dense mapping technique.
 
@@ -549,8 +550,6 @@ This model, while simple, ignores occlusions. It makes no distinction between po
 The depth camera can be modeled as a set of cones emenating from the camera's focal point -- one cone for each depth pixel. The cone is the swept volume of the depth pixel projected into the scene, and has a length equal to the depth pixel's measurement (\figref{fig:raycone}). The cone may be seen as the union of all rays that pass through the depth pixel from the focal point of the camera.
 
 This is a much more complex model, incorporating information about which points in the scene have been passed through by rays as well as which points lie on surfaces (as well as their surface normal). 
-
-\textbf{TODO: How to proceed with the ray model? I can make reference to my voxel carving work, and probably to DART, which has a beautiful symmetric interpretation of the passthrough information.}
 
 \sectionbf{Dense Sensor-To-Map Constrained SLAM}
 \label{sec:dense_constrained_slam}
