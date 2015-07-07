@@ -172,7 +172,7 @@ Articulated 3D SLAM}  % Title of the book
 
 %\cleardoublepage
 \chapter*{Introduction}
-To interact with and understand the world, robots must interpret and fuse noisy and ambiguous signals from their sensors. Consider the case of a multi-jointed robot arm with a 2D or 3D camera attached to its end effector (\figref{fig:ada_cup}). The robot receives noisy signals from its joint encoders, the hand-mounted camera, and other sensors. How can the robot make sense of the world given these noisy, heterogenous signals? How can it then take action based on this information? To successfully complete a task (such as grasping an object), it is critical that the robot have an accurate geometric representation of the world around it. 
+To interact with and understand the world, robots must interpret and fuse noisy and ambiguous signals from their sensors. Consider the case of a multi-jointed robot arm with a 2D or 3D camera attached to its end effector (\figref{fig:ada_cup}). The robot receives noisy signals from its joint encoders, the hand-mounted camera, and other sensors. How can the robot make sense of the world given these noisy, heterogeneous signals? How can it then take action based on this information? To successfully complete a task (such as grasping an object), it is critical that the robot have an accurate geometric representation of the world around it. 
 
 \begin{figure}
 \includegraphics[width=1.0\textwidth]{img/ADA/dracula_far_3.JPG}
@@ -182,11 +182,11 @@ To interact with and understand the world, robots must interpret and fuse noisy 
 
 Dense 3D reconstruction is a well-studied problem in computer vision and robotics. Given a series of noisy sensor readings a unknown poses, the task is to infer the true geometric structure and color of the world. This  is a variant of the \ac{SLAM}  problem \sref{sec:SLAM} , since it requires simultaneously estimating the state of the sensor and the scene at once. In the context of robotic manipulation, dense 3D reconstruction is useful for scene understanding, planning, grasping, and more. 
 
-Typical techniques for solving this problem focus on handheld sensors, and thus assume that little is known about the pose of the sensor aside from weak priors on the magnitude of the motion (though it is sometimes assumed that other sources of motion estimation, such as markers, gyroscopes, or inertial measurement units are available). For this reason, many prior works directly estimate the pose of a handheld sensor using visual (or depth) data alone.  Depending on the type of sensor, the lack of additional information can lead to inaccuracies in pose and ultimately  in the resulting 3D reconstruction. For instance, using a handheld depth amera, it is impossible to detect motion parallel to a flat plane using the (unchanging) depth data alone \sref{sec:dense_SLAM} , without additional sensors or \apriori knowledge of how the sensor moves.
+Typical techniques for solving this problem focus on hand-held sensors, and thus assume that little is known about the pose of the sensor aside from weak priors on the magnitude of the motion (though it is sometimes assumed that other sources of motion estimation, such as markers, gyroscopes, or inertial measurement units are available). For this reason, many prior works directly estimate the pose of a hand-held sensor using visual (or depth) data alone.  Depending on the type of sensor, the lack of additional information can lead to inaccuracies in pose and ultimately  in the resulting 3D reconstruction. For instance, using a handheld depth amera, it is impossible to detect motion parallel to a flat plane using the (unchanging) depth data alone \sref{sec:dense_SLAM} , without additional sensors or \apriori knowledge of how the sensor moves.
 
 On the other hand, robot linkages provide extremely strong cues of the sensor's motion, due to their constrained kinematics \sref{sec:robot_kinematics}. As the robot actuates its joints, the sensor moves in a predictable manner. If the joint angles of the robot are perfeclty known, and the robot is perfectly rigid, the pose of the sensor is known with absolute certainty through forward kinematics. In this context, dense 3D reconstruction is a simple mapping problem rather than a full \ac{SLAM}  problem.
 
-However, even articulated robotic linkages may have significant noise and systematic inaccuracies \sref{sec:encoder_noise}. The use of relative joint encoders leads to inaccuracy that compounds over time; and on some systems, joint encoders are seperated from the actuation system by a mechanism with unpredictable dynamics.  The \textit{Baxter} (\figref{fig:baxter}) robot, for instance, has series-elastic actuators and deformable plastic gears which significantly increase its kinematic uncertainty. Another robot arm, the \textit{Barret WAM}, is driven by cables. Stretch in the cables results in systematic error that is configuration and torque dependant. In the extreme case, there may be degrees of freedom that are entirely unknown (such as the pose of the robot's base, or the extrinsic calibration of the sensor). One way of dealing with systematic error  is to calibrate the joint encoders to account for unknown dynamics and other sources of systematic error; but if additional unmodeled dynamics are introduced (such as a grasped object, or exterior forces),  the calibration will fail to capture them.
+However, even articulated robotic linkages may have significant noise and systematic inaccuracies \sref{sec:encoder_noise}. The use of relative joint encoders leads to inaccuracy that compounds over time; and on some systems, joint encoders are separated from the actuation system by a mechanism with unpredictable dynamics.  The \textit{Baxter} (\figref{fig:baxter}) robot, for instance, has series-elastic actuators and deformable plastic gears which significantly increase its kinematic uncertainty. Another robot arm, the \textit{Barret WAM}, is driven by cables. Stretch in the cables results in systematic error that is configuration and torque dependent. In the extreme case, there may be degrees of freedom that are entirely unknown (such as the pose of the robot's base, or the extrinsic calibration of the sensor). One way of dealing with systematic error  is to calibrate the joint encoders to account for unknown dynamics and other sources of systematic error; but if additional unmodeled dynamics are introduced (such as a grasped object, or exterior forces),  the calibration will fail to capture them.
 
 \begin{marginfigure}
 \includegraphics{img/baxter_hand.png}
@@ -226,7 +226,7 @@ T^{W}_{L_i} = T^{L_{i - 1}}_{L_{i}}(q_{i - 1}) \ldots T^{L_1}_{L_2} (q_1)  T^{W}
 
 \noindent the path from the root to the link in question is called that link's \textit{kinematic chain}. The end of the kinematic chain is called the \textit{end effector}. This work will use the reference frame of the camera as the end of the arm's kinematic chain.
 
-A robot's configuration $\qvec \in \mathbb{R^N}$ is a vector which concatenates all of its joints' degrees of fredom:
+A robot's configuration $\qvec \in \mathbb{R^N}$ is a vector which concatenates all of its joints' degrees of freedom:
 
 \begin{equation}
 \qvec = \colvec{3}{q_1}{\vdots}{q_N}
@@ -329,14 +329,14 @@ Depending on the scene representation and sensor type, different approaches to s
 M = \{V, E\}
 \end{equation}
 
-\noindent where $V = \{v_1, \ldots, v_N\}$ is a colletion of vertices, with $v_i \in SE(3)$ as either a landmark pose or a sensor pose, and $E=\{e_1, \ldots, e_M\}$ is a collection of directed edges, with each edge defining a transformation $e_i = T_{v_a}^{v_b}$ from one vertex $v_a$ to another vertex $v_b$. A pose graph is said to be \textit{consistent} whenever each edge is consistent (\ie, whenever $v_a e_i  = v_b$). A \textit{loop closure} happens whenever two edges share the same outgoing vertex.
+\noindent where $V = \{v_1, \ldots, v_N\}$ is a collection of vertexes, with $v_i \in SE(3)$ as either a landmark pose or a sensor pose, and $E=\{e_1, \ldots, e_M\}$ is a collection of directed edges, with each edge defining a transformation $e_i = T_{v_a}^{v_b}$ from one vertex $v_a$ to another vertex $v_b$. A pose graph is said to be \textit{consistent} whenever each edge is consistent (\ie, whenever $v_a e_i  = v_b$). A \textit{loop closure} happens whenever two edges share the same outgoing vertex.
 
 \begin{figure}
 \includegraphics{img/pose_graph.pdf}
 \caption{An example of a pose graph.}
 \end{figure}
 
-This breaks up the graphical model (\figref{fig:graphical_model_SLAM} ) so that sensor measurements are only corellated by shared landmarks, rather than all sensor measurements being corellated. 
+This breaks up the graphical model (\figref{fig:graphical_model_SLAM} ) so that sensor measurements are only correlated by shared landmarks, rather than all sensor measurements being corellated. 
 
 More generally, a pose graph can contain arbitrary nodes as states, and arbitrary links between nodes which represent factors in a factor graph\cite{Kaess08tro}. In my thesis work, the nodes in the pose graph will be robot configurations, links between nodes will come from an observed motion derived from the sensor, as well as additional factors from the robot's joint encoders.
 
@@ -370,7 +370,7 @@ A dense map representation of particular interest to our problem is the \ac{SDF}
 \end{equation}
 
 
-\noindent $\Phi$ is negative inside objects, positive outside objects, and zero along the surface. The gradient $\nabla \Phi$ can be easily calculated,  and the representation very flexible, allowing $\Phi$ to represent many kinds of scenes. On the other hand, storing the SDF requires memory on the order of the volume of the scene.
+\noindent $\Phi$ is negative inside objects, positive outside objects, and zero along the surface. The gradient $\nabla \Phi$ can be easily calculated,  and the representation very flexible, allowing $\Phi$ to represent many kinds of scenes. On the other hand, storing the \ac{SDF} requires memory on the order of the volume of the scene.
 
 \begin{algorithm}
 \tcp{Given a depth image, sensor pose, previous SDF, previous voxel weights, a weighting function, a volume of interest, and a truncation distance}
@@ -414,7 +414,7 @@ $W_{t} \gets W_{t - 1}$
  
  In practice, the \ac{SDF} is computed only for a small region around the surfaces of objects (called the \textit{truncation region}) for which the locally-linear approximation is good. The result is the \ac{TSDF}\cite{Curless1996}  (\algref{alg:TSDF}). \ac{TSDF}-based dense \ac{SLAM}  techniques (such as \textit{kinect fusion} and variants) build $\Phi$ at time $t$ by fusing the depth image produced by the camera at time $t - 1$. A depth image can be fused into an SDF by computing a locally-linear approximation of the SDF for the depth image, and averaging it into the SDF computed at $t - 1$.  Since only one dense model is maintained at each timestep, errors in the model can compound over time.
 
-One of my earlier works, \textsc{Chisel}\cite{Klingensmith2015}, explores techniques for efficiently building and storing the SDF used in dense SLAM, and extends the technique to mobile phones. My thesis will be using \textsc{Chisel} as a backend dense mapping technique.
+One of my earlier works, \textsc{Chisel}\cite{Klingensmith2015}, explores techniques for efficiently building and storing the SDF used in dense SLAM, and extends the technique to mobile phones. My thesis will be using \textsc{Chisel} as a back end dense mapping technique.
 
 \section{Direct Monocular SLAM} 
 \label{sec:direct_SLAM} 
@@ -427,7 +427,7 @@ H_{t} = \argmin_{H} \big\| I_{t - 1}[Z_{t - 1}] - I_{t}[\Proj(H Z_{t - 1})]\big\
 
 \noindent where $I$ is the camera image at a given time, and $Z_t$ is the point cloud as inferred by stereo matching between pose $H_t$ and $H_{t - 1}$. Examples of  direct techniques include \textsc{Orb-SLAM} \cite{Murartal2015}, \textsc{Lsd-SLAM} \cite{Engel2015}, and \textsc{Dtam} \cite{Newcombe2011}.
 
-Direct monocular methods, like sparse keypoint methods, are scale ambigous, and cannot distinguish between two scenes that differ only in scale. Like sparse keypoint methods,  they generally build a pose graph on top of the dense or semi-dense localization system.
+Direct monocular methods, like sparse key-point methods, are scale ambiguous, and cannot distinguish between two scenes that differ only in scale. Like sparse key-point methods,  they generally build a pose graph on top of the dense or semi-dense localization system.
 
 Direct methods generally use Gauss-Newton nonlinear optimization to solve for \eqnref{eq:direct_min}. They apply a small motion $\Delta\xi$ to the camera's pose by solving:
 
@@ -485,7 +485,7 @@ The prior $\Prob \big (\qvec | \qvec_{t - 1}, \uvec_{t - 1})$ depends on the rob
 \tau(\uvec) = \mathbf{M}(\qvec)\ddot{\qvec} + \mathbf{C}(\qvec, \dot{\qvec})\dot{\qvec} + \mathbf{G}(\qvec, \dot{\qvec}, F_{\text{ext}})
 \end{equation}
 
-\noindent where $\tau$ is the torque the robot produces at its joints given $\qvec$, $\mathbf{M}$ is a function representing the robot's mass projected into joint space, $\mathbf{C}$ is a function representing the internal corolis forces that the robot experiences, and $\mathbf{G}$ is a function representing how the robot responds to external forces $F_{\text{ext}}$ (usually gravity). 
+\noindent where $\tau$ is the torque the robot produces at its joints given $\qvec$, $\mathbf{M}$ is a function representing the robot's mass projected into joint space, $\mathbf{C}$ is a function representing the internal Coriolis forces that the robot experiences, and $\mathbf{G}$ is a function representing how the robot responds to external forces $F_{\text{ext}}$ (usually gravity). 
 
 If this dynamics model were known perfectly, then the prior motion model would be completely deterministic, and indeed, no external sensors of any kind (not even joint encoders) would be needed to track its state over time. Unfortunately, the dynamics model of a robot manipulator is not easy to calculate, and depends on having a full account of external and internal forces the robot experiences. 
 
@@ -507,7 +507,7 @@ These unmodeled dynamics can be mitigated in two ways: first, by treating them l
 
 Robots invariably have sensors (called \textit{encoders}) mounted on their motors and/or joints. These sensors report a value $\qvec^{(e)}$ that correlates to the actual geometric joint angle  $\qvec^{(j)}$, but, due to the complications of an unknown intervening mechanism (\figref{fig:motor_encoder}), the encoder's reported value may have noise and systematic error (\figref{fig:encoder_noise}). For instance, the Barrett \textit{WAM} robot arm is cable-driven. Its' encoders are attached to its' motors, and a complicated system of cables and pulleys transmits torque from the motor to the joint. Unmodeled dynamics from stretch in the cable system leads to a discrepancy between $\qvec^{(e)}$ and $\qvec^{(j)}$.
 
-Define a simple probabalistic model:
+Define a simple probabilistic model:
 
 \begin{equation}
 \qvec^{(j)} = g( \qvec ^{(e)}) + \epsilon (\qvec^{(e)}) 
@@ -553,19 +553,19 @@ Assume that the points in the point cloud are corrupted by simple isotropic Gaus
 
 \noindent where $\Phi$ is the signed distance field representation of the scene $M$.
 
-This model, while simple, ignores occlusions. It makes no distinction between points behind obstacles and points in front of obstacles from the perspective of the camera. It also ignores the aniostropic (direction-dependant) nature of depth sensor noise. A more complicated model may be needed to correctly capture the depth camera posterior. The generalized \ac{ICP} \cite{Segal-RSS} algorithm directly makes use of this model to align ray clouds.
+This model, while simple, ignores occlusions. It makes no distinction between points behind obstacles and points in front of obstacles from the perspective of the camera. It also ignores the anisotropic (direction-dependent) nature of depth sensor noise. A more complicated model may be needed to correctly capture the depth camera posterior. The generalized \ac{ICP} \cite{Segal-RSS} algorithm directly makes use of this model to align ray clouds.
 
 ~\\
 
 \begin{figure}
 \includegraphics{img/raycone.pdf}
-\caption{A cone/ray model of the depth camera. The cone emenates from the sensor's focal point $\mathbf{o}$, with direction $\hat{n}$. It hits the surface of the scene at point $\mathbf{\mathbf{z}_uv}$, which is distance $z$ along its center.} 
+\caption{A cone/ray model of the depth camera. The cone emanates from the sensor's focal point $\mathbf{o}$, with direction $\hat{n}$. It hits the surface of the scene at point $\mathbf{\mathbf{z}_uv}$, which is distance $z$ along its center.} 
 \label{fig:raycone}
 \end{figure}
 
 \noindent\textbf{Ray/Cone Cloud Model}
 \label{subsec:raycone}
-The depth camera can be modeled as a set of cones emenating from the camera's focal point -- one cone for each depth pixel. The cone is the swept volume of the depth pixel projected into the scene, and has a length equal to the depth pixel's measurement (\figref{fig:raycone}). The cone may be seen as the union of all rays that pass through the depth pixel from the focal point of the camera.
+The depth camera can be modeled as a set of cones emanating from the camera's focal point -- one cone for each depth pixel. The cone is the swept volume of the depth pixel projected into the scene, and has a length equal to the depth pixel's measurement (\figref{fig:raycone}). The cone may be seen as the union of all rays that pass through the depth pixel from the focal point of the camera.
 
 This is a much more complex model, incorporating information about which points in the scene have been passed through by rays as well as which points lie on surfaces (as well as their surface normal).
 
@@ -610,7 +610,7 @@ c(\qvec) =  \frac{1}{2}\sum_{[u, v] \in \Omega}\Phi(\mathbf{z}_{u, v}) ^2
  &= \sum_{[u, v] \in \Omega} \left[\Phi(\mathbf{z}_{u, v}) \mathbf{J}(\qvec, \mathbf{z}_{u, v})^T\nabla \Phi(\mathbf{z}_{u, v})\right]
 \end{align}
 
-\noindent where $ \mathbf{J}(\qvec, \mathbf{z}_{u, v}) \in \mathbb{R}^{3 \times N}$ is the manipulator's kinematic jacobian\sref{sec:robot_kinematics} evaluated for the point $\mathbf{z}_{u, v}$ as rigidly attached to the end effector. The gradient of the SDF $\nabla \Phi$ is easy to approximate using finite differencing.
+\noindent where $ \mathbf{J}(\qvec, \mathbf{z}_{u, v}) \in \mathbb{R}^{3 \times N}$ is the manipulator's kinematic Jacobian\sref{sec:robot_kinematics} evaluated for the point $\mathbf{z}_{u, v}$ as rigidly attached to the end effector. The gradient of the SDF $\nabla \Phi$ is easy to approximate using finite differencing.
 
 \begin{figure}
 \includegraphics{img/robot_reconstruct.pdf}
@@ -618,7 +618,7 @@ c(\qvec) =  \frac{1}{2}\sum_{[u, v] \in \Omega}\Phi(\mathbf{z}_{u, v}) ^2
 \label{fig:robot_reconstruct}
 \end{figure}
 
-This cost function and gradient has an interesting physical interpretation (\figref{fig:robot_reconstruct}). If all of the points in the point cloud are interpereted as being rigidly attached to the camera frame, and a force is applied at each of the points $\mathbf{z}_{u, v}$ with a force in the direction $\nabla\Phi(\mathbf{z}_{u, v})$ with magnitude $\Phi(\mathbf{z}_{u, v})$, the gradient $\nabla c$ is the same as the instantaneous acceleration the joints would experience from the sum of such forces.
+This cost function and gradient has an interesting physical interpretation (\figref{fig:robot_reconstruct}). If all of the points in the point cloud are interpreted as being rigidly attached to the camera frame, and a force is applied at each of the points $\mathbf{z}_{u, v}$ with a force in the direction $\nabla\Phi(\mathbf{z}_{u, v})$ with magnitude $\Phi(\mathbf{z}_{u, v})$, the gradient $\nabla c$ is the same as the instantaneous acceleration the joints would experience from the sum of such forces.
 
 The likelihood of $\qvec_t$ can be maximized using gradient descent of the cost function $c$ regularized by the motor encoders (\algref{alg:gradient_descent}). In this way, the robot's configuration stays near what is reported by its motor encoders, but is allowed to change in response to the sensor data.
 
@@ -702,7 +702,7 @@ The robot scans the scene, and makes a single loop closure. When using the (nois
 \end{marginfigure}
 
 \section{3D Simulation Experiments}
-The same concept can be extended to 3D scenes (\figref{fig:arm_track_3d_sim}). I built a framework for doing dense sensor-to-model articulated tracking (\algref{alg:gradient_descent}) in 3D, as well as a depth sensor simulator. Like in the 2D experiments, the robot follows a fixed trajectory. I again add Perlin noise the joint encoders. The robot builds a 3D \ac{TSDF} using the simulated depth data (\figref{fig:sim_depth}). \figref{fig:sim_3d_reconstructions} shows the result of the same robot trajectory and depth data being used to reconstruct a bookshelf without any joint encoder noise, with noise and dense articulated 3D tracking, and without any tracking. Even under conditions of extreme encoder noise, dense frame-to-model \ac{SLAM} is able to create a high-qaulity 3D reconstructions of the scene. On the other hand, using the noisy encoders alone, the 3D reconstruction is almost totally unrecognizable.
+The same concept can be extended to 3D scenes (\figref{fig:arm_track_3d_sim}). I built a framework for doing dense sensor-to-model articulated tracking (\algref{alg:gradient_descent}) in 3D, as well as a depth sensor simulator. Like in the 2D experiments, the robot follows a fixed trajectory. I again add Perlin noise the joint encoders. The robot builds a 3D \ac{TSDF} using the simulated depth data (\figref{fig:sim_depth}). \figref{fig:sim_3d_reconstructions} shows the result of the same robot trajectory and depth data being used to reconstruct a bookshelf without any joint encoder noise, with noise and dense articulated 3D tracking, and without any tracking. Even under conditions of extreme encoder noise, dense frame-to-model \ac{SLAM} is able to create a high-quality 3D reconstructions of the scene. On the other hand, using the noisy encoders alone, the 3D reconstruction is almost totally unrecognizable.
 
 \begin{figure}
 \caption{ }
@@ -742,7 +742,7 @@ As interesting as these questions are, they will have to be secondary to the fun
 
 \sectionbf{How can the encoder noise be modeled on real robot arms?}
 
-So far, I have only considered vague properties of encoder noise \sref{sec:encoder_noise} -- that it is really unmodeled dynamics causing the discrepency between joint encoders and the actual joint angles, and that it is likely configuration-dependant. In simulated experiments, I have modeled the noise using a random Perlin function \sref{chap:experiments}. But what exactly \textit{are} the unmodeled dynamics I am trying to capture? What physical processes cause them, and how can these physical processes be modeled?
+So far, I have only considered vague properties of encoder noise \sref{sec:encoder_noise} -- that it is really unmodeled dynamics causing the discrepancy between joint encoders and the actual joint angles, and that it is likely configuration-dependent. In simulated experiments, I have modeled the noise using a random Perlin function \sref{chap:experiments}. But what exactly \textit{are} the unmodeled dynamics I am trying to capture? What physical processes cause them, and how can these physical processes be modeled?
 
 Answering this question will require a literature review of existing methods, data collection on real robots, and a framework for testing different dynamics models.
 
@@ -752,7 +752,7 @@ So far, my experiments have only covered 2D and 3D simulated datasets. Obviously
 
 \sectionbf{How can a pose graph be incorporated into the articulated \ac{SLAM} framework?}
 
-So far, I have only derived dense camera-to-model 3D \ac{SLAM} \sref{sec:dense_constrained_SLAM} . This approach works well for small workspaces when the displacement between camera poses is small, but fails over long trajectories and large workspaces. The camera-to-keyframe or pose graph methods \sref{sec:sparse_SLAM}  correct for drift by globally optimizing the entire trajectory with respect to every keyframe. Incorporating a pose graph into the articulated \ac{SLAM} problem would be an ideal way of correcting for drift.
+So far, I have only derived dense camera-to-model 3D \ac{SLAM} \sref{sec:dense_constrained_SLAM} . This approach works well for small workspaces when the displacement between camera poses is small, but fails over long trajectories and large workspaces. The camera-to-keySframe or pose graph methods \sref{sec:sparse_SLAM}  correct for drift by globally optimizing the entire trajectory with respect to every keyframe. Incorporating a pose graph into the articulated \ac{SLAM} problem would be an ideal way of correcting for drift.
 
 Answering this question will require re-deriving pose graph optimization in terms of \textit{robot configurations} rather than \textit{camera poses}.
 
